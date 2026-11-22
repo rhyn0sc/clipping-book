@@ -379,7 +379,7 @@ details.steps code{background:var(--surface);border:1px solid var(--line);border
       <div>
         <label class="f" for="f-key">Secret key</label>
         <div class="input-btn">
-          <input class="in" id="f-key" readonly placeholder="Tap Generate">
+          <input class="in" id="f-key" placeholder="Tap Generate, or paste the key" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
           <button class="btn" type="button" id="f-gen">Generate</button>
           <button class="btn" type="button" id="f-copy-script">Copy script</button>
         </div>
@@ -1441,8 +1441,10 @@ $('#f-copy-script').addEventListener('click', async () => {
   catch (e) { prompt('Copy the script:', code); }
 });
 $('#f-url').addEventListener('change', () => { S.settings.form.url = $('#f-url').value.trim(); S.forms.fetchedAt = 0; save(); });
+$('#f-key').addEventListener('change', () => { S.settings.form.key = $('#f-key').value.trim(); S.forms.fetchedAt = 0; save(); });
 $('#f-test').addEventListener('click', async () => {
   const st = $('#f-status'), b = $('#f-test');
+  S.settings.form.key = $('#f-key').value.trim();
   S.settings.form.url = $('#f-url').value.trim();
   st.classList.remove('err'); st.textContent = 'Connecting…'; b.disabled = true;
   try {
