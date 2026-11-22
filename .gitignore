@@ -1,0 +1,7 @@
+# Personal data: never publish
+*.xlsx
+*.xls
+*.csv
+*.json
+*.ics
+.test/

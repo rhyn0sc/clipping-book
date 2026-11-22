@@ -1,0 +1,1251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7a4a2a">
+<title>Clipping Book</title>
+<style>
+:root{
+  --bg:#f7f2ea; --surface:#fffdf9; --surface-2:#f1e9dd; --line:#e3d7c6;
+  --ink:#2b2118; --ink-2:#6b5a49; --ink-3:#998772;
+  --accent:#7a4a2a; --accent-ink:#fff; --accent-soft:#f0e0d2;
+  --good:#2f6b45; --good-soft:#dcefe2; --warn:#a1621a; --warn-soft:#f8e8cf; --bad:#a3352b; --bad-soft:#f6dcd8;
+  --shadow:0 1px 2px rgba(60,40,20,.06),0 4px 14px rgba(60,40,20,.06);
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1b1713; --surface:#25201b; --surface-2:#2e2822; --line:#3c342c;
+    --ink:#f1e8dc; --ink-2:#c2b3a1; --ink-3:#8f806f;
+    --accent:#d39a6a; --accent-ink:#1b1713; --accent-soft:#3a2c21;
+    --good:#7fc79a; --good-soft:#223529; --warn:#e0a85c; --warn-soft:#3a2e1c; --bad:#ec8f84; --bad-soft:#3d2422;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1b1713; --surface:#25201b; --surface-2:#2e2822; --line:#3c342c;
+  --ink:#f1e8dc; --ink-2:#c2b3a1; --ink-3:#8f806f;
+  --accent:#d39a6a; --accent-ink:#1b1713; --accent-soft:#3a2c21;
+  --good:#7fc79a; --good-soft:#223529; --warn:#e0a85c; --warn-soft:#3a2e1c; --bad:#ec8f84; --bad-soft:#3d2422;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+h1,h2,h3{margin:0;line-height:1.2}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:12px;height:58px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.brand svg{width:28px;height:28px;color:var(--accent)}
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:600;font-size:15px;min-height:42px;text-decoration:none;color:var(--ink)}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{background:transparent;border-color:transparent}
+.btn.danger{color:var(--bad)}
+.btn.small{min-height:34px;padding:5px 10px;font-size:14px}
+.btn:disabled{opacity:.5;cursor:default}
+main{padding:18px 0 24px}
+section[data-view]{display:none}
+section[data-view].on{display:block}
+.title-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:6px 0 14px}
+.title-row h2{font-size:22px}
+.muted{color:var(--ink-2)} .faint{color:var(--ink-3)} .small{font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.stat{padding:12px 14px}
+.stat .k{font-size:13px;color:var(--ink-2)}
+.stat .v{font-size:24px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.day{margin:18px 0 8px;font-size:14px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em;display:flex;gap:8px;align-items:center}
+.day .pill{text-transform:none;letter-spacing:0}
+.appt{padding:14px;margin-bottom:10px;display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:start}
+.appt .time{font-weight:700;font-variant-numeric:tabular-nums;min-width:62px}
+.appt .who{font-weight:700}
+.appt .horses{color:var(--ink-2);font-size:14px}
+.appt .amt{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.appt .amt small{display:block;font-weight:500;color:var(--ink-3);font-size:12px}
+.appt .actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;background:var(--surface-2);color:var(--ink-2)}
+.pill.travel{background:var(--warn-soft);color:var(--warn)}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.empty{padding:34px 18px;text-align:center;color:var(--ink-2)}
+.empty svg{width:48px;height:48px;color:var(--ink-3);margin-bottom:6px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;color:var(--ink-2);font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:last-child td{border-bottom:0}
+.table-card{overflow:hidden}
+.table-scroll{overflow-x:auto}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:7px 12px;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;color:var(--ink-2)}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.list-item{display:flex;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.list-item:last-child{border-bottom:0}
+.list-item:hover{background:var(--surface-2)}
+.list-item .grow{flex:1;min-width:0}
+.list-item .name{font-weight:700}
+.ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:13px}
+.chip b{font-weight:700;margin-left:4px;color:var(--ink-2)}
+
+/* forms */
+label.f{display:block;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:4px}
+.in{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;min-height:44px;outline:none}
+.in:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.in{min-height:70px;resize:vertical}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+@media (max-width:520px){.g3{grid-template-columns:1fr 1fr}.g3>.full-sm{grid-column:1/-1}}
+.input-btn{display:flex;gap:8px}
+.input-btn .in{flex:1}
+.prefix{position:relative}
+.prefix span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-3);pointer-events:none}
+.prefix .in{padding-left:24px}
+.suffix{position:relative}
+.suffix span{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--ink-3);pointer-events:none;font-size:14px}
+.suffix .in{padding-right:44px}
+.svc{display:flex;flex-wrap:wrap;gap:6px}
+.svc label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:14px;background:var(--surface);user-select:none}
+.svc input{position:absolute;opacity:0;pointer-events:none}
+.svc label:has(input:checked){background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.svc label small{opacity:.75}
+.horse-row{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface-2);display:grid;gap:10px}
+.horse-row .hdr{display:flex;gap:8px;align-items:center}
+.horse-row .hdr .in{flex:1}
+.check{display:flex;gap:10px;align-items:center;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--accent)}
+.summary{border-radius:12px;background:var(--accent-soft);padding:12px 14px;display:grid;gap:4px;font-variant-numeric:tabular-nums}
+.summary .row{display:flex;justify-content:space-between;gap:10px}
+.summary .total{font-size:20px;font-weight:800;border-top:1px solid color-mix(in srgb,var(--accent) 30%,transparent);padding-top:6px;margin-top:4px}
+.why{font-size:13px;color:var(--ink-2)}
+.status-line{font-size:13px;min-height:18px;color:var(--ink-2)}
+.status-line.err{color:var(--bad)}
+fieldset{border:0;padding:0;margin:0;display:grid;gap:12px}
+legend{font-weight:700;font-size:16px;margin-bottom:8px;padding:0}
+.settings-card{padding:16px;margin-bottom:14px;display:grid;gap:12px}
+.settings-card h3{font-size:17px}
+.radio-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.radio-cards label{border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;display:flex;gap:10px;align-items:flex-start;background:var(--surface)}
+.radio-cards label:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.radio-cards input{accent-color:var(--accent);margin-top:3px}
+.radio-cards b{display:block}
+.radio-cards span{font-size:13px;color:var(--ink-2)}
+.example{font-size:14px;background:var(--surface-2);border-radius:10px;padding:10px 12px}
+
+dialog{border:0;padding:0;border-radius:18px;background:var(--surface);color:var(--ink);width:min(640px,calc(100vw - 24px));max-height:calc(100dvh - 24px);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(30,20,10,.45)}
+dialog form{display:flex;flex-direction:column;max-height:calc(100dvh - 24px)}
+.dlg-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.dlg-head h3{font-size:18px;flex:1}
+.dlg-body{padding:16px;overflow:auto;display:grid;gap:14px}
+.dlg-foot{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);align-items:center}
+@media (max-width:560px){
+  dialog{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;margin:0}
+  dialog form{max-height:100dvh;height:100%}
+  .dlg-body{flex:1}
+  .dlg-foot{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+}
+
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs .wrap{display:grid;grid-template-columns:repeat(5,1fr);height:64px;padding:0}
+nav.tabs a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--ink-3);text-decoration:none}
+nav.tabs a svg{width:24px;height:24px}
+nav.tabs a.on{color:var(--accent)}
+.fab{position:fixed;right:16px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:7;border-radius:999px;padding:0 20px;min-height:52px;box-shadow:0 6px 20px rgba(122,74,42,.35);font-size:16px}
+@media (min-width:900px){.fab{right:calc(50% - 380px + 16px)}}
+.toast{position:fixed;left:50%;bottom:calc(140px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:50;max-width:calc(100vw - 32px)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.bar{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.svc-break td:first-child{width:38%}
+.hide{display:none!important}
+
+/* login */
+#lock{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
+#lock .card{width:min(400px,100%);padding:24px;display:grid;gap:14px}
+#lock .brand{justify-content:center;font-size:22px}
+#lock .brand svg{width:36px;height:36px}
+#lock p{margin:0;text-align:center}
+body.locked > :not(#lock):not(script){display:none!important}
+
+/* search */
+.search{position:relative;margin-bottom:12px}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--ink-3);pointer-events:none}
+.search .in{padding-left:38px}
+
+/* calendar */
+.cal-head{display:flex;align-items:center;gap:8px;margin:6px 0 12px}
+.cal-head h2{flex:1;font-size:22px}
+.cal{padding:8px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal-dow{font-size:12px;font-weight:700;color:var(--ink-3);text-align:center;padding:4px 0;text-transform:uppercase}
+.cal-day{min-height:78px;border-radius:10px;padding:5px;background:var(--surface-2);border:1px solid transparent;cursor:pointer;display:flex;flex-direction:column;gap:3px;text-align:left;font:inherit;color:inherit;min-width:0}
+.cal-day:hover{border-color:var(--line)}
+.cal-day.out{opacity:.4}
+.cal-day.today .n{background:var(--accent);color:var(--accent-ink);border-radius:999px}
+.cal-day.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.cal-day .n{font-size:13px;font-weight:700;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+.cal-ev{font-size:11px;line-height:1.25;border-radius:5px;padding:2px 4px;background:var(--accent);color:var(--accent-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-ev.done{background:var(--good-soft);color:var(--good)}
+.cal-more{font-size:11px;color:var(--ink-2);padding-left:2px}
+.cal-dots{display:none;gap:3px;flex-wrap:wrap;padding-left:2px}
+.cal-dots i{width:7px;height:7px;border-radius:99px;background:var(--accent)}
+.cal-dots i.done{background:var(--good)}
+@media (max-width:560px){
+  .cal-day{min-height:52px;padding:4px}
+  .cal-ev,.cal-more{display:none}
+  .cal-dots{display:flex}
+}
+.cal-legend{display:flex;gap:14px;font-size:13px;color:var(--ink-2);margin:10px 4px 0}
+.cal-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--accent);margin-right:5px;vertical-align:-1px}
+.cal-legend i.done{background:var(--good)}
+</style>
+</head>
+<body class="locked">
+<div id="lock">
+  <form class="card" id="lock-form" autocomplete="on">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20c0-3 1-5 3-6l-1-3c-1-1-2-3-1-5 2 0 3 1 4 2l2-2 1 3c3 1 5 4 5 8v3"/><path d="M14 9.5h.01"/><path d="M6 20h13"/></svg>
+      <span>Clipping Book</span>
+    </div>
+    <p class="muted" id="lock-msg">Loading…</p>
+    <input type="text" name="username" value="clipping-book" autocomplete="username" class="hide" aria-hidden="true">
+    <div><label class="f" for="lock-pw">Password</label><input class="in" id="lock-pw" type="password" autocomplete="current-password" required></div>
+    <div id="lock-pw2-wrap" class="hide"><label class="f" for="lock-pw2">Type it again</label><input class="in" id="lock-pw2" type="password" autocomplete="new-password"></div>
+    <label class="check small"><input type="checkbox" id="lock-remember" checked> Keep me signed in on this device</label>
+    <button class="btn primary" type="submit" id="lock-go">Sign in</button>
+    <div class="status-line err" id="lock-err" style="text-align:center"></div>
+    <button class="btn ghost small hide" type="button" id="lock-reset">Forgot password? Erase this device and start over</button>
+  </form>
+</div>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20c0-3 1-5 3-6l-1-3c-1-1-2-3-1-5 2 0 3 1 4 2l2-2 1 3c3 1 5 4 5 8v3"/><path d="M14 9.5h.01"/><path d="M6 20h13"/></svg>
+      <span>Clipping Book</span>
+    </div>
+    <div class="spacer"></div>
+    <span id="hdr-sub" class="muted small"></span>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- UPCOMING -->
+  <section data-view="upcoming">
+    <div class="stats" id="up-stats"></div>
+    <div class="title-row"><h2>Upcoming</h2><span class="muted small" id="up-count"></span></div>
+    <div id="up-list"></div>
+  </section>
+
+  <!-- CALENDAR -->
+  <section data-view="calendar">
+    <div class="cal-head">
+      <button class="btn small" id="cal-prev" aria-label="Previous month">‹</button>
+      <h2 id="cal-title"></h2>
+      <button class="btn small" id="cal-today">Today</button>
+      <button class="btn small" id="cal-next" aria-label="Next month">›</button>
+    </div>
+    <div class="card cal"><div class="cal-grid" id="cal-grid"></div></div>
+    <div class="cal-legend"><span><i></i>Booked</span><span><i class="done"></i>Done</span></div>
+    <div class="title-row" style="margin-top:18px"><h3 id="cal-day-title"></h3><button class="btn small" id="cal-book">+ Book this day</button></div>
+    <div id="cal-day-list"></div>
+  </section>
+
+  <!-- HISTORY -->
+  <section data-view="history">
+    <div class="title-row">
+      <h2>History</h2>
+      <select class="in" id="hist-year" style="width:auto;min-height:38px;padding:6px 10px"></select>
+    </div>
+    <div class="stats" id="hist-stats"></div>
+    <div class="card table-card" style="margin-bottom:16px">
+      <div style="padding:12px 14px 0"><b>By service</b></div>
+      <div class="table-scroll"><table class="svc-break" id="svc-table"></table></div>
+    </div>
+    <div class="title-row" style="margin-top:20px"><h3>Expenses</h3><button class="btn small" id="add-expense">+ Expense</button></div>
+    <div class="card table-card" style="margin-bottom:18px"><div class="table-scroll"><table id="exp-table"></table></div></div>
+    <div class="title-row" style="margin-top:20px"><h3>Completed visits</h3><span class="muted small" id="hist-count"></span></div>
+    <div class="card table-card"><div class="table-scroll"><table id="hist-table"></table></div></div>
+  </section>
+
+  <!-- CLIENTS -->
+  <section data-view="clients">
+    <div class="title-row"><h2>Clients</h2><button class="btn small" id="add-client">+ Client</button></div>
+    <p class="muted small" style="margin-top:-6px">Save each owner or barn with their address. The app works out the distance once, and every booking after that uses it automatically.</p>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input class="in" id="client-search" type="search" placeholder="Search clients, horses, addresses, phone…" autocomplete="off">
+    </div>
+    <div class="card" id="client-list"></div>
+    <div class="title-row" style="margin-top:24px"><h3>Horses on file</h3><span class="muted small" id="horse-count"></span></div>
+    <div class="chips" id="horse-chips"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section data-view="settings">
+    <div class="title-row"><h2>Settings</h2></div>
+
+    <div class="card settings-card">
+      <h3>Home base</h3>
+      <div>
+        <label class="f" for="s-home">Home address</label>
+        <div class="input-btn">
+          <input class="in" id="s-home" placeholder="123 Ranch Rd, Town, ST" autocomplete="street-address">
+          <button class="btn" type="button" id="s-home-find">Find</button>
+        </div>
+        <div class="status-line" id="s-home-status"></div>
+      </div>
+    </div>
+
+    <div class="card settings-card">
+      <h3>Travel fee</h3>
+      <div class="radio-cards">
+        <label><input type="radio" name="s-mode" value="miles"><div><b>By distance</b><span>Charge once the drive is over a set number of miles</span></div></label>
+        <label><input type="radio" name="s-mode" value="minutes"><div><b>By drive time</b><span>Charge once the drive is over a set number of minutes</span></div></label>
+      </div>
+      <div class="radio-cards">
+        <label><input type="radio" name="s-style" value="per"><div><b>Per mile / minute over</b><span>Only the part past the free limit is charged</span></div></label>
+        <label><input type="radio" name="s-style" value="flat"><div><b>Flat fee</b><span>One set fee once the limit is passed</span></div></label>
+      </div>
+      <div class="grid g2" data-mode="miles">
+        <div><label class="f" for="s-freeMiles">Free up to</label><div class="suffix"><input class="in" id="s-freeMiles" type="number" min="0" step="1" inputmode="decimal"><span>miles</span></div></div>
+        <div data-style="per"><label class="f" for="s-perMile">Rate per mile over</label><div class="prefix"><span>$</span><input class="in" id="s-perMile" type="number" min="0" step="0.05" inputmode="decimal"></div></div>
+      </div>
+      <div class="grid g2" data-mode="minutes">
+        <div><label class="f" for="s-freeMinutes">Free up to</label><div class="suffix"><input class="in" id="s-freeMinutes" type="number" min="0" step="1" inputmode="numeric"><span>min</span></div></div>
+        <div data-style="per"><label class="f" for="s-perMinute">Rate per minute over</label><div class="prefix"><span>$</span><input class="in" id="s-perMinute" type="number" min="0" step="0.05" inputmode="decimal"></div></div>
+      </div>
+      <div data-style="flat" class="grid g2">
+        <div><label class="f" for="s-flat">Flat travel fee</label><div class="prefix"><span>$</span><input class="in" id="s-flat" type="number" min="0" step="1" inputmode="decimal"></div></div>
+      </div>
+      <label class="check" data-style="per"><input type="checkbox" id="s-round"> Double it for the round trip</label>
+      <div class="example" id="s-example"></div>
+    </div>
+
+    <div class="card settings-card">
+      <h3>Prices</h3>
+      <div class="grid g3" id="s-prices"></div>
+      <div class="grid g2">
+        <div><label class="f" for="s-duration">Default appointment length</label><div class="suffix"><input class="in" id="s-duration" type="number" min="15" step="15"><span>min</span></div></div>
+      </div>
+    </div>
+
+    <div class="card settings-card">
+      <h3>Backup</h3>
+      <p class="muted small" style="margin:0">Everything is saved in this browser on this device. Export a backup now and then, or to move the data to another phone or computer.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button class="btn" id="b-export">Export backup</button>
+        <button class="btn" id="b-import">Import backup or 2026 history</button>
+        <button class="btn" id="b-csv">Export visits (CSV for Excel)</button>
+        <input type="file" id="b-file" accept="application/json,.json" class="hide">
+      </div>
+      <div class="status-line" id="b-status"></div>
+    </div>
+
+    <div class="card settings-card">
+      <h3>Appearance</h3>
+      <div class="seg" id="theme-seg">
+        <button type="button" data-t="auto">Auto</button>
+        <button type="button" data-t="light">Light</button>
+        <button type="button" data-t="dark">Dark</button>
+      </div>
+    </div>
+
+    <div class="card settings-card">
+      <h3>Account</h3>
+      <p class="muted small" style="margin:0">Your data is encrypted with your password and stored only on this device. Nobody who opens the website can see it.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button class="btn" id="acct-signout">Sign out</button>
+        <button class="btn" id="acct-change">Change password</button>
+      </div>
+      <div class="status-line" id="acct-status"></div>
+    </div>
+  </section>
+</main>
+
+<button class="btn primary fab" id="fab">
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  Book
+</button>
+
+<nav class="tabs" aria-label="Sections">
+  <div class="wrap">
+    <a href="#upcoming" data-tab="upcoming"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>Upcoming</a>
+    <a href="#calendar" data-tab="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><path d="M7.5 13h.01M12 13h.01M16.5 13h.01M7.5 17h.01M12 17h.01"/></svg>Calendar</a>
+    <a href="#history" data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>History</a>
+    <a href="#clients" data-tab="clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.3-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.8.8 3 2.6 3.5 5.2"/></svg>Clients</a>
+    <a href="#settings" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</a>
+  </div>
+</nav>
+
+<!-- BOOKING DIALOG -->
+<dialog id="dlg-appt">
+  <form method="dialog" id="appt-form" novalidate>
+    <div class="dlg-head"><h3 id="appt-title">New booking</h3><button type="button" class="btn ghost small" data-close aria-label="Close">✕</button></div>
+    <div class="dlg-body">
+      <fieldset>
+        <div>
+          <label class="f" for="a-client">Client (owner or barn)</label>
+          <input class="in" id="a-client" list="dl-clients" placeholder="Start typing a name…" autocomplete="off" required>
+          <div class="status-line" id="a-client-hint"></div>
+        </div>
+        <div class="grid g2">
+          <div><label class="f" for="a-date">Date</label><input class="in" id="a-date" type="date" required></div>
+          <div><label class="f" for="a-time">Time</label><input class="in" id="a-time" type="time" step="900"></div>
+        </div>
+        <div class="grid g2">
+          <div><label class="f" for="a-phone">Phone</label><input class="in" id="a-phone" type="tel" autocomplete="off"></div>
+          <div><label class="f" for="a-duration">Length</label><div class="suffix"><input class="in" id="a-duration" type="number" min="15" step="15"><span>min</span></div></div>
+        </div>
+        <div>
+          <label class="f" for="a-address">Address</label>
+          <div class="input-btn">
+            <input class="in" id="a-address" placeholder="Where she's driving to" autocomplete="off">
+            <button class="btn" type="button" id="a-lookup">Get distance</button>
+          </div>
+          <div class="status-line" id="a-lookup-status"></div>
+        </div>
+        <div class="grid g2">
+          <div><label class="f" for="a-miles">One-way distance</label><div class="suffix"><input class="in" id="a-miles" type="number" min="0" step="0.1" inputmode="decimal"><span>miles</span></div></div>
+          <div><label class="f" for="a-minutes">Drive time</label><div class="suffix"><input class="in" id="a-minutes" type="number" min="0" step="1" inputmode="numeric"><span>min</span></div></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Horses</legend>
+        <div id="a-horses" class="grid"></div>
+        <button type="button" class="btn" id="a-add-horse">+ Add another horse</button>
+      </fieldset>
+
+      <fieldset>
+        <label class="check"><input type="checkbox" id="a-waive"> Waive travel fee for this visit</label>
+        <div><label class="f" for="a-notes">Notes</label><textarea class="in" id="a-notes" placeholder="Gate code, blade sizes, temperament…"></textarea></div>
+      </fieldset>
+
+      <div class="summary" id="a-summary"></div>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn danger hide" id="a-delete">Delete</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary" id="a-save">Save booking</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- CLIENT DIALOG -->
+<dialog id="dlg-client">
+  <form method="dialog" id="client-form" novalidate>
+    <div class="dlg-head"><h3 id="c-title">Client</h3><button type="button" class="btn ghost small" data-close aria-label="Close">✕</button></div>
+    <div class="dlg-body">
+      <div><label class="f" for="c-name">Name (owner or barn)</label><input class="in" id="c-name" required></div>
+      <div><label class="f" for="c-phone">Phone</label><input class="in" id="c-phone" type="tel"></div>
+      <div>
+        <label class="f" for="c-address">Address</label>
+        <div class="input-btn"><input class="in" id="c-address"><button class="btn" type="button" id="c-lookup">Get distance</button></div>
+        <div class="status-line" id="c-lookup-status"></div>
+      </div>
+      <div class="grid g2">
+        <div><label class="f" for="c-miles">One-way distance</label><div class="suffix"><input class="in" id="c-miles" type="number" min="0" step="0.1"><span>miles</span></div></div>
+        <div><label class="f" for="c-minutes">Drive time</label><div class="suffix"><input class="in" id="c-minutes" type="number" min="0" step="1"><span>min</span></div></div>
+      </div>
+      <div><label class="f" for="c-horses">Horses (comma separated)</label><input class="in" id="c-horses" placeholder="Nova, Bandit"></div>
+      <div><label class="f" for="c-notes">Notes</label><textarea class="in" id="c-notes"></textarea></div>
+      <div class="example" id="c-fee"></div>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn danger hide" id="c-delete">Delete</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn hide" id="c-book">Book visit</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- EXPENSE DIALOG -->
+<dialog id="dlg-exp">
+  <form method="dialog" id="exp-form" novalidate>
+    <div class="dlg-head"><h3>Expense</h3><button type="button" class="btn ghost small" data-close aria-label="Close">✕</button></div>
+    <div class="dlg-body">
+      <div class="grid g2">
+        <div><label class="f" for="e-date">Date</label><input class="in" id="e-date" type="date"></div>
+        <div><label class="f" for="e-amount">Amount</label><div class="prefix"><span>$</span><input class="in" id="e-amount" type="number" min="0" step="0.01" inputmode="decimal" required></div></div>
+      </div>
+      <div><label class="f" for="e-desc">What for</label><input class="in" id="e-desc" placeholder="Blades, sharpening, fuel…"></div>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn danger hide" id="e-delete">Delete</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<datalist id="dl-clients"></datalist>
+<datalist id="dl-horses"></datalist>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- constants ---------- */
+const KEY = 'clippingBook.v1';
+const SERVICES = [
+  ['full','Full'],['irish','Irish'],['body','Body'],['trace','Trace'],['faceHalf','Face (Half)'],['faceFull','Face (Full)']
+];
+const SVC_LABEL = Object.fromEntries(SERVICES);
+
+/* ---------- helpers ---------- */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+const optNum = v => (v === '' || v == null || !Number.isFinite(parseFloat(v))) ? null : parseFloat(v);
+const r2 = n => Math.round(n * 100) / 100;
+const money = n => { n = r2(n || 0); return (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString(undefined, {minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2}); };
+const norm = s => String(s || '').trim().toLowerCase();
+const pad = n => String(n).padStart(2,'0');
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+const parseISO = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const fmtDate = (s, opts={weekday:'short', month:'short', day:'numeric'}) => s ? parseISO(s).toLocaleDateString(undefined, opts) : '';
+const fmtTime = t => { if (!t) return ''; const [h,m] = t.split(':').map(Number); const d = new Date(); d.setHours(h, m, 0, 0); return d.toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'}); };
+const dayDiff = s => Math.round((parseISO(s) - parseISO(todayISO())) / 86400000);
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2400); }
+
+/* ---------- state ---------- */
+function defaultState(){
+  return {
+    version: 1,
+    settings: {
+      homeAddress: '', home: null,
+      prices: {full:195, irish:95, body:120, trace:95, faceHalf:20, faceFull:35},
+      travel: {mode:'miles', style:'per', freeMiles:35, perMile:0.70, freeMinutes:45, perMinute:1.00, flatFee:25, roundTrip:true},
+      defaultDuration: 90,
+      theme: 'auto'
+    },
+    clients: [],
+    appts: [],
+    expenses: []
+  };
+}
+let S;
+function normalize(){
+  if (!S || !S.settings) S = defaultState();
+  const d = defaultState().settings;
+  S.settings = {...d, ...S.settings, prices:{...d.prices, ...S.settings.prices}, travel:{...d.travel, ...S.settings.travel}};
+  S.clients ||= []; S.appts ||= []; S.expenses ||= [];
+}
+
+/* ---------- encrypted storage + login ----------
+   All data is encrypted (AES-GCM, key from the password via PBKDF2) before it touches
+   localStorage. The page itself holds no client data, so it is safe to host publicly. */
+const VAULT = 'clippingBook.vault', SESS = 'clippingBook.session';
+let cryptoKey = null, vaultSalt = null;
+const b64 = buf => { const a = new Uint8Array(buf); let s = ''; for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); };
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function deriveKey(pw, salt){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:310000, hash:'SHA-256'}, base, {name:'AES-GCM', length:256}, true, ['encrypt','decrypt']);
+}
+async function sealString(str){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, cryptoKey, new TextEncoder().encode(str));
+  return {v:1, salt:b64(vaultSalt), iv:b64(iv), ct:b64(ct)};
+}
+async function openVault(vault, key){
+  const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:unb64(vault.iv)}, key, unb64(vault.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+let saving = Promise.resolve();
+function save(){
+  if (!cryptoKey) return;
+  const snapshot = JSON.stringify(S);
+  saving = saving.then(async () => {
+    try { localStorage.setItem(VAULT, JSON.stringify(await sealString(snapshot))); }
+    catch (e) { toast('Could not save. Export a backup now from Settings.'); }
+  });
+}
+async function rememberSession(persist){
+  const raw = b64(await crypto.subtle.exportKey('raw', cryptoKey));
+  const v = JSON.stringify({k:raw});
+  try { localStorage.removeItem(SESS); sessionStorage.removeItem(SESS); (persist ? localStorage : sessionStorage).setItem(SESS, v); } catch (e) {}
+}
+function readVault(){ try { return JSON.parse(localStorage.getItem(VAULT) || 'null'); } catch (e) { return null; } }
+let lockMode = 'signin';
+function showLock(mode, msg){
+  lockMode = mode;
+  document.body.classList.add('locked');
+  const create = mode === 'create';
+  $('#lock-msg').textContent = msg || (create ? 'Create a password to protect your client list on this device.' : 'Enter your password.');
+  $('#lock-pw2-wrap').classList.toggle('hide', !create);
+  $('#lock-pw').autocomplete = create ? 'new-password' : 'current-password';
+  $('#lock-go').textContent = create ? 'Create password' : 'Sign in';
+  $('#lock-reset').classList.toggle('hide', create);
+  $('#lock-err').textContent = '';
+  $('#lock-pw').value = ''; $('#lock-pw2').value = '';
+  setTimeout(() => $('#lock-pw').focus(), 50);
+}
+function unlock(){
+  normalize();
+  document.body.classList.remove('locked');
+  applyTheme();
+  if (!location.hash) history.replaceState(null, '', '#upcoming');
+  show(current());
+}
+async function boot(){
+  if (!window.crypto || !crypto.subtle) { showLock('signin', 'This browser cannot encrypt data here. Open the app from its https:// address.'); $('#lock-go').disabled = true; return; }
+  const vault = readVault();
+  if (!vault) {
+    const legacy = localStorage.getItem(KEY);
+    showLock('create', legacy ? 'Create a password. Your existing bookings on this device will be encrypted with it.' : undefined);
+    return;
+  }
+  let sess = null; try { sess = localStorage.getItem(SESS) || sessionStorage.getItem(SESS); } catch (e) {}
+  if (sess) {
+    try {
+      const key = await crypto.subtle.importKey('raw', unb64(JSON.parse(sess).k), 'AES-GCM', true, ['encrypt','decrypt']);
+      S = await openVault(vault, key); cryptoKey = key; vaultSalt = unb64(vault.salt);
+      return unlock();
+    } catch (e) { try { localStorage.removeItem(SESS); sessionStorage.removeItem(SESS); } catch (_) {} }
+  }
+  showLock('signin');
+}
+$('#lock-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const pw = $('#lock-pw').value, err = $('#lock-err'), go = $('#lock-go');
+  err.textContent = '';
+  if (lockMode === 'create') {
+    if (pw.length < 6) { err.textContent = 'Use at least 6 characters.'; return; }
+    if (pw !== $('#lock-pw2').value) { err.textContent = 'The two passwords don\'t match.'; return; }
+  }
+  go.disabled = true; go.textContent = 'One moment…';
+  try {
+    if (lockMode === 'create') {
+      vaultSalt = crypto.getRandomValues(new Uint8Array(16));
+      cryptoKey = await deriveKey(pw, vaultSalt);
+      try { S = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) { S = null; }
+      normalize(); save(); await saving;
+      localStorage.removeItem(KEY); // drop any old unencrypted copy
+    } else {
+      const vault = readVault();
+      const key = await deriveKey(pw, unb64(vault.salt));
+      try { S = await openVault(vault, key); } catch (_) { err.textContent = 'Wrong password.'; return; }
+      cryptoKey = key; vaultSalt = unb64(vault.salt);
+    }
+    await rememberSession($('#lock-remember').checked);
+    unlock();
+  } finally { go.disabled = false; go.textContent = lockMode === 'create' ? 'Create password' : 'Sign in'; }
+});
+$('#lock-reset').addEventListener('click', () => {
+  if (!confirm('Erase all Clipping Book data on this device? You can restore it afterwards from a backup file.')) return;
+  if (!confirm('Are you sure? This cannot be undone.')) return;
+  [VAULT, SESS, KEY].forEach(k => { try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch (e) {} });
+  location.reload();
+});
+$('#acct-signout').addEventListener('click', async () => {
+  await saving;
+  try { localStorage.removeItem(SESS); sessionStorage.removeItem(SESS); } catch (e) {}
+  location.reload();
+});
+$('#acct-change').addEventListener('click', async () => {
+  const st = $('#acct-status');
+  const p1 = prompt('New password (at least 6 characters):'); if (p1 == null) return;
+  if (p1.length < 6) { st.textContent = 'Password not changed: use at least 6 characters.'; return; }
+  if (prompt('Type the new password again:') !== p1) { st.textContent = 'Password not changed: they didn\'t match.'; return; }
+  await saving;
+  vaultSalt = crypto.getRandomValues(new Uint8Array(16));
+  cryptoKey = await deriveKey(p1, vaultSalt);
+  save(); await saving;
+  let persist = false; try { persist = !!localStorage.getItem(SESS); } catch (e) {}
+  await rememberSession(persist);
+  st.textContent = 'Password changed.';
+});
+
+/* ---------- pricing ---------- */
+function horseAmount(services){ return r2((services || []).reduce((s, k) => s + num(S.settings.prices[k]), 0)); }
+function travelQuote(miles, minutes){
+  const t = S.settings.travel;
+  const byTime = t.mode === 'minutes';
+  const val = byTime ? minutes : miles;
+  const unit = byTime ? 'min' : 'mi';
+  const free = byTime ? num(t.freeMinutes) : num(t.freeMiles);
+  if (val == null) return {fee:0, known:false, why:`Enter the ${byTime ? 'drive time' : 'distance'} to work out travel`};
+  if (val <= free) return {fee:0, known:true, why:`${fmtN(val)} ${unit} is inside the free ${fmtN(free)} ${unit}`};
+  const over = val - free;
+  if (t.style === 'flat') return {fee:r2(num(t.flatFee)), known:true, why:`${fmtN(val)} ${unit} is past ${fmtN(free)} ${unit}, so the flat fee applies`};
+  const rate = byTime ? num(t.perMinute) : num(t.perMile);
+  const mult = t.roundTrip ? 2 : 1;
+  return {fee:r2(over * rate * mult), known:true, why:`${fmtN(over)} ${unit} over × ${money(rate)}${t.roundTrip ? ' × 2 (round trip)' : ''}`};
+}
+function fmtN(n){ return (Math.round(n * 10) / 10).toLocaleString(); }
+function computeAppt(a){
+  a.horses.forEach(h => { if (!a.imported) h.amount = horseAmount(h.services); });
+  const q = travelQuote(a.miles, a.minutes);
+  a.travel = a.waive ? 0 : q.fee;
+  a.total = r2(a.horses.reduce((s, h) => s + num(h.amount) + num(h.extra), 0) + a.travel);
+  return q;
+}
+
+/* ---------- maps (free, no key) ---------- */
+async function geocode(q){
+  const home = S.settings.home;
+  const bias = home ? `&lat=${home.lat}&lon=${home.lon}` : '';
+  try {
+    const r = await fetch(`https://photon.komoot.io/api/?limit=1&q=${encodeURIComponent(q)}${bias}`);
+    if (r.ok) {
+      const j = await r.json();
+      const f = j.features && j.features[0];
+      if (f) {
+        const p = f.properties || {};
+        const label = [p.housenumber && p.street ? `${p.housenumber} ${p.street}` : (p.name || p.street), p.city || p.county, p.state].filter(Boolean).join(', ');
+        return {lon:f.geometry.coordinates[0], lat:f.geometry.coordinates[1], label};
+      }
+    }
+  } catch (e) { /* fall through */ }
+  const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}`);
+  const j = await r.json();
+  if (!j[0]) throw new Error('Address not found. Try adding the town and state.');
+  return {lat:+j[0].lat, lon:+j[0].lon, label:j[0].display_name.split(',').slice(0,3).join(',')};
+}
+async function route(from, to){
+  const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=false`);
+  const j = await r.json();
+  if (j.code !== 'Ok' || !j.routes[0]) throw new Error('Could not find a driving route.');
+  return {miles: Math.round(j.routes[0].distance / 1609.344 * 10) / 10, minutes: Math.round(j.routes[0].duration / 60)};
+}
+async function lookupDistance(address, statusEl){
+  statusEl.classList.remove('err');
+  if (!S.settings.home) { statusEl.textContent = 'Set your home address in Settings first.'; statusEl.classList.add('err'); return null; }
+  if (!address.trim()) { statusEl.textContent = 'Type an address first.'; statusEl.classList.add('err'); return null; }
+  statusEl.textContent = 'Looking up…';
+  try {
+    const g = await geocode(address);
+    const d = await route(S.settings.home, g);
+    statusEl.textContent = `Found ${g.label}: ${d.miles} mi, about ${d.minutes} min each way.`;
+    return {...d, lat:g.lat, lon:g.lon};
+  } catch (e) {
+    statusEl.textContent = (e.message && !/fetch/i.test(e.message)) ? e.message : 'Lookup failed (are you online?). You can type miles and minutes yourself.';
+    statusEl.classList.add('err');
+    return null;
+  }
+}
+
+/* ---------- routing / tabs ---------- */
+const VIEWS = ['upcoming','calendar','history','clients','settings'];
+function show(view){
+  if (!S || !cryptoKey) return; // still locked
+  if (!VIEWS.includes(view)) view = 'upcoming';
+  $$('section[data-view]').forEach(s => s.classList.toggle('on', s.dataset.view === view));
+  $$('nav.tabs a').forEach(a => a.classList.toggle('on', a.dataset.tab === view));
+  $('#fab').classList.toggle('hide', view === 'settings');
+  render(view);
+  window.scrollTo(0,0);
+}
+window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+function current(){ return (location.hash.slice(1) || 'upcoming'); }
+function render(view = current()){
+  refreshDatalists();
+  const n = S.appts.filter(a => a.status === 'upcoming').length;
+  $('#hdr-sub').textContent = n ? `${n} upcoming` : '';
+  ({upcoming:renderUpcoming, calendar:renderCalendar, history:renderHistory, clients:renderClients, settings:renderSettings}[view] || renderUpcoming)();
+}
+
+/* ---------- CALENDAR ---------- */
+let calMonth = null, calSel = null; // calMonth = 'YYYY-MM'
+const isoOf = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const byTime = (a, b) => (a.time || '99').localeCompare(b.time || '99');
+function apptsOn(iso){ return S.appts.filter(a => !a.imported && a.status !== 'cancelled' && a.date === iso).sort(byTime); }
+function renderCalendar(){
+  const today = todayISO();
+  if (!calMonth) {
+    const next = S.appts.filter(a => a.status === 'upcoming' && a.date >= today).sort((a,b) => a.date.localeCompare(b.date))[0];
+    calSel = today; calMonth = today.slice(0,7);
+    if (next && next.date.slice(0,7) !== calMonth && !apptsOn(today).length && !S.appts.some(a => a.status === 'upcoming' && a.date.slice(0,7) === calMonth)) { calMonth = next.date.slice(0,7); calSel = next.date; }
+  }
+  const [y, m] = calMonth.split('-').map(Number);
+  const first = new Date(y, m-1, 1);
+  $('#cal-title').textContent = first.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+  const start = new Date(y, m-1, 1 - first.getDay());
+  const weeks = Math.ceil((first.getDay() + new Date(y, m, 0).getDate()) / 7);
+  const dows = [...Array(7)].map((_, i) => new Date(2023, 0, 1 + i).toLocaleDateString(undefined, {weekday:'short'}));
+  let html = dows.map(d => `<div class="cal-dow">${esc(d)}</div>`).join('');
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const iso = isoOf(d), list = apptsOn(iso);
+    const cls = ['cal-day', d.getMonth() !== m-1 ? 'out' : '', iso === today ? 'today' : '', iso === calSel ? 'sel' : ''].filter(Boolean).join(' ');
+    const evs = list.slice(0, 3).map(a => `<div class="cal-ev ${a.status === 'done' ? 'done' : ''}">${esc((a.time ? fmtTime(a.time).replace(':00','').replace(/\s/g,'').toLowerCase() + ' ' : '') + a.clientName)}</div>`).join('');
+    const more = list.length > 3 ? `<div class="cal-more">+${list.length - 3} more</div>` : '';
+    const dots = list.length ? `<div class="cal-dots">${list.slice(0, 4).map(a => `<i class="${a.status === 'done' ? 'done' : ''}"></i>`).join('')}</div>` : '';
+    html += `<button type="button" class="${cls}" data-day="${iso}" aria-label="${esc(fmtDate(iso, {weekday:'long', month:'long', day:'numeric'}))}${list.length ? `, ${list.length} booked` : ''}"><span class="n">${d.getDate()}</span>${evs}${more}${dots}</button>`;
+  }
+  $('#cal-grid').innerHTML = html;
+  renderCalDay();
+}
+function renderCalDay(){
+  const list = apptsOn(calSel);
+  $('#cal-day-title').textContent = fmtDate(calSel, {weekday:'long', month:'long', day:'numeric'});
+  $('#cal-day-list').innerHTML = list.length ? list.map(a => `<div class="card appt" data-cal-appt="${a.id}" style="cursor:pointer">
+      <div class="time">${esc(fmtTime(a.time) || '—')}</div>
+      <div><div class="who">${esc(a.clientName)} ${a.status === 'done' ? '<span class="pill good">Done</span>' : ''}</div>
+        <div class="horses">${a.horses.map(h => `${esc(h.name || 'Horse')}: ${h.services.map(s => SVC_LABEL[s]).join(' + ') || 'extras'}`).join(' · ')}</div>
+        ${a.address ? `<div class="small faint">${esc(a.address)}</div>` : ''}</div>
+      <div class="amt">${money(a.total)}${a.travel ? `<small>incl. ${money(a.travel)} travel</small>` : ''}</div>
+    </div>`).join('') : `<div class="card empty small">Nothing booked this day.</div>`;
+}
+$('#cal-grid').addEventListener('click', e => { const b = e.target.closest('[data-day]'); if (!b) return; calSel = b.dataset.day; if (calSel.slice(0,7) !== calMonth) calMonth = calSel.slice(0,7); renderCalendar(); });
+$('#cal-day-list').addEventListener('click', e => {
+  const c = e.target.closest('[data-cal-appt]'); if (!c) return;
+  const a = S.appts.find(x => x.id === c.dataset.calAppt);
+  if (a && a.status === 'upcoming') openAppt(a); else if (a) toast('This visit is done. Find it in History.');
+});
+const shiftMonth = n => { const [y, m] = calMonth.split('-').map(Number); const d = new Date(y, m-1+n, 1); calMonth = isoOf(d).slice(0,7); calSel = calMonth === todayISO().slice(0,7) ? todayISO() : calMonth + '-01'; renderCalendar(); };
+$('#cal-prev').addEventListener('click', () => shiftMonth(-1));
+$('#cal-next').addEventListener('click', () => shiftMonth(1));
+$('#cal-today').addEventListener('click', () => { calSel = todayISO(); calMonth = calSel.slice(0,7); renderCalendar(); });
+$('#cal-book').addEventListener('click', () => openAppt(null, {date: calSel}));
+
+/* ---------- datalists ---------- */
+function allHorseNames(){
+  const m = new Map();
+  S.appts.forEach(a => a.status === 'done' && a.horses.forEach(h => { const k = norm(h.name); if (k) m.set(k, {name: m.get(k)?.name || h.name.trim(), n: (m.get(k)?.n || 0) + 1}); }));
+  S.clients.forEach(c => (c.horses || []).forEach(h => { const k = norm(h); if (k && !m.has(k)) m.set(k, {name:h, n:0}); }));
+  return [...m.values()].sort((a,b) => a.name.localeCompare(b.name));
+}
+function refreshDatalists(){
+  $('#dl-clients').innerHTML = S.clients.map(c => `<option value="${esc(c.name)}">`).join('');
+  $('#dl-horses').innerHTML = allHorseNames().map(h => `<option value="${esc(h.name)}">`).join('');
+}
+const findClient = name => S.clients.find(c => norm(c.name) === norm(name));
+
+/* ---------- UPCOMING ---------- */
+function renderUpcoming(){
+  const ups = S.appts.filter(a => a.status === 'upcoming').sort((a,b) => (a.date + (a.time||'99')).localeCompare(b.date + (b.time||'99')));
+  const in7 = ups.filter(a => { const d = dayDiff(a.date); return d >= 0 && d < 7; });
+  const travelCount = ups.filter(a => a.travel > 0).length;
+  $('#up-stats').innerHTML = [
+    ['Next 7 days', in7.length + (in7.length === 1 ? ' visit' : ' visits')],
+    ['Expected (7 days)', money(in7.reduce((s,a) => s + a.total, 0))],
+    ['All booked', money(ups.reduce((s,a) => s + a.total, 0))],
+    ['With travel fee', String(travelCount)]
+  ].map(([k,v]) => `<div class="card stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  $('#up-count').textContent = ups.length ? `${ups.length} booked` : '';
+  const list = $('#up-list');
+  if (!ups.length) {
+    list.innerHTML = `<div class="card empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4M12 13v4M10 15h4"/></svg><div><b>Nothing booked yet</b></div><div class="small">Tap <b>Book</b> to add an upcoming clip.</div>${S.settings.home ? '' : '<div class="small" style="margin-top:8px">Tip: set your home address in <a href="#settings">Settings</a> so the app can work out travel fees.</div>'}</div>`;
+    return;
+  }
+  let html = '', lastDay = null;
+  for (const a of ups) {
+    if (a.date !== lastDay) {
+      lastDay = a.date;
+      const d = dayDiff(a.date);
+      const tag = d < 0 ? '<span class="pill bad">Past, mark done?</span>' : d === 0 ? '<span class="pill good">Today</span>' : d === 1 ? '<span class="pill">Tomorrow</span>' : '';
+      html += `<div class="day">${esc(fmtDate(a.date, {weekday:'long', month:'short', day:'numeric'}))} ${tag}</div>`;
+    }
+    const horses = a.horses.map(h => `${esc(h.name || 'Horse')}: ${h.services.map(s => SVC_LABEL[s]).join(' + ') || 'extras'}`).join(' · ');
+    const dist = [a.miles != null ? `${fmtN(a.miles)} mi` : '', a.minutes != null ? `${a.minutes} min` : ''].filter(Boolean).join(' · ');
+    const maps = a.address ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.address)}` : '';
+    html += `<div class="card appt">
+      <div class="time">${esc(fmtTime(a.time) || '—')}</div>
+      <div><div class="who">${esc(a.clientName)}</div><div class="horses">${horses}</div>
+        <div class="small faint" style="margin-top:2px">${esc(dist)} ${a.travel > 0 ? `<span class="pill travel">+${money(a.travel)} travel</span>` : a.waive ? '<span class="pill">travel waived</span>' : ''}</div>
+        ${a.notes ? `<div class="small muted" style="margin-top:4px">${esc(a.notes)}</div>` : ''}
+      </div>
+      <div class="amt">${money(a.total)}</div>
+      <div class="actions">
+        <button class="btn small primary" data-act="done" data-id="${a.id}">✓ Done</button>
+        <button class="btn small" data-act="edit" data-id="${a.id}">Edit</button>
+        ${maps ? `<a class="btn small" href="${maps}" target="_blank" rel="noopener">Directions</a>` : ''}
+        ${a.phone ? `<a class="btn small" href="sms:${esc(a.phone.replace(/[^\d+]/g,''))}">Text</a>` : ''}
+        <button class="btn small" data-act="ics" data-id="${a.id}">Add to calendar</button>
+      </div>
+    </div>`;
+  }
+  list.innerHTML = html;
+}
+$('#up-list').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const a = S.appts.find(x => x.id === b.dataset.id); if (!a) return;
+  if (b.dataset.act === 'edit') openAppt(a);
+  if (b.dataset.act === 'ics') downloadICS(a);
+  if (b.dataset.act === 'done') { a.status = 'done'; a.completedAt = todayISO(); save(); render(); toast(`Marked done: ${money(a.total)} added to history`); }
+});
+
+/* ---------- BOOKING DIALOG ---------- */
+let editing = null;
+function horseRowHTML(h = {name:'', services:[], extra:''}){
+  return `<div class="horse-row">
+    <div class="hdr"><input class="in h-name" list="dl-horses" placeholder="Horse name" value="${esc(h.name)}" autocomplete="off"><button type="button" class="btn ghost small h-remove" aria-label="Remove horse">✕</button></div>
+    <div class="svc">${SERVICES.map(([k,l]) => `<label><input type="checkbox" value="${k}" ${h.services.includes(k) ? 'checked' : ''}>${l} <small>${money(S.settings.prices[k])}</small></label>`).join('')}</div>
+    <div class="grid g2"><div><label class="f">Extra</label><div class="prefix"><span>$</span><input class="in h-extra" type="number" min="0" step="1" inputmode="decimal" value="${h.extra || ''}" placeholder="0"></div></div></div>
+  </div>`;
+}
+function readAppt(){
+  return {
+    clientName: $('#a-client').value.trim(), phone: $('#a-phone').value.trim(), address: $('#a-address').value.trim(),
+    date: $('#a-date').value, time: $('#a-time').value, duration: num($('#a-duration').value) || S.settings.defaultDuration,
+    miles: optNum($('#a-miles').value), minutes: optNum($('#a-minutes').value),
+    waive: $('#a-waive').checked, notes: $('#a-notes').value.trim(),
+    horses: $$('#a-horses .horse-row').map(r => ({name: $('.h-name', r).value.trim(), services: $$('.svc input:checked', r).map(i => i.value), extra: num($('.h-extra', r).value)}))
+  };
+}
+function updateSummary(){
+  const a = readAppt();
+  const q = computeAppt(a);
+  const svc = a.horses.reduce((s,h) => s + h.amount, 0), ext = a.horses.reduce((s,h) => s + h.extra, 0);
+  $('#a-summary').innerHTML = `
+    <div class="row"><span>Clipping</span><span>${money(svc)}</span></div>
+    ${ext ? `<div class="row"><span>Extras</span><span>${money(ext)}</span></div>` : ''}
+    <div class="row"><span>Travel ${a.waive ? '(waived)' : ''}</span><span>${money(a.travel)}</span></div>
+    <div class="why">${esc(a.waive ? 'Travel fee waived for this visit' : q.why)}</div>
+    <div class="row total"><span>Total</span><span>${money(a.total)}</span></div>`;
+  $$('#a-horses .h-remove').forEach(b => b.classList.toggle('hide', $$('#a-horses .horse-row').length < 2));
+}
+function openAppt(a = null, preset = {}){
+  editing = a;
+  const f = $('#appt-form'); f.reset();
+  $('#appt-title').textContent = a ? 'Edit booking' : 'New booking';
+  $('#a-delete').classList.toggle('hide', !a);
+  $('#a-lookup-status').textContent = ''; $('#a-client-hint').textContent = '';
+  const src = a || {clientName: preset.clientName || '', date: todayISO(), time:'09:00', duration:S.settings.defaultDuration, horses:[{name:'', services:[], extra:''}], ...preset};
+  if (!a && preset.clientName) { const c = findClient(preset.clientName); if (c) Object.assign(src, clientFields(c)); }
+  $('#a-client').value = src.clientName || '';
+  $('#a-phone').value = src.phone || '';
+  $('#a-address').value = src.address || '';
+  $('#a-date').value = src.date || todayISO();
+  $('#a-time').value = src.time || '';
+  $('#a-duration').value = src.duration || S.settings.defaultDuration;
+  $('#a-miles').value = src.miles ?? '';
+  $('#a-minutes').value = src.minutes ?? '';
+  $('#a-waive').checked = !!src.waive;
+  $('#a-notes').value = src.notes || '';
+  $('#a-horses').innerHTML = (src.horses && src.horses.length ? src.horses : [{name:'',services:[],extra:''}]).map(horseRowHTML).join('');
+  updateSummary();
+  $('#dlg-appt').showModal();
+  if (!a) setTimeout(() => $('#a-client').focus(), 50);
+}
+function clientFields(c){
+  return {phone:c.phone || '', address:c.address || '', miles:c.miles ?? null, minutes:c.minutes ?? null,
+    horses: (c.horses && c.horses.length ? c.horses : ['']).map(n => ({name:n, services:[], extra:''}))};
+}
+$('#a-client').addEventListener('change', () => {
+  const c = findClient($('#a-client').value);
+  const hint = $('#a-client-hint');
+  if (!c) { hint.textContent = $('#a-client').value.trim() ? 'New client. They will be saved when you save this booking.' : ''; return; }
+  hint.textContent = `Filled in from ${c.name}'s saved details.`;
+  if (c.phone) $('#a-phone').value = c.phone;
+  if (c.address) $('#a-address').value = c.address;
+  if (c.miles != null) $('#a-miles').value = c.miles;
+  if (c.minutes != null) $('#a-minutes').value = c.minutes;
+  const names = $$('#a-horses .h-name').map(i => i.value.trim()).filter(Boolean);
+  if (!names.length && c.horses && c.horses.length) {
+    $('#a-horses').innerHTML = c.horses.map(n => horseRowHTML({name:n, services:[], extra:''})).join('');
+  }
+  updateSummary();
+});
+$('#a-lookup').addEventListener('click', async () => {
+  const b = $('#a-lookup'); b.disabled = true;
+  const d = await lookupDistance($('#a-address').value, $('#a-lookup-status'));
+  b.disabled = false;
+  if (d) { $('#a-miles').value = d.miles; $('#a-minutes').value = d.minutes; updateSummary(); }
+});
+$('#a-add-horse').addEventListener('click', () => { $('#a-horses').insertAdjacentHTML('beforeend', horseRowHTML()); updateSummary(); $$('#a-horses .h-name').pop().focus(); });
+$('#a-horses').addEventListener('click', e => { if (e.target.closest('.h-remove')) { e.target.closest('.horse-row').remove(); updateSummary(); } });
+$('#appt-form').addEventListener('input', updateSummary);
+$('#appt-form').addEventListener('change', updateSummary);
+$('#appt-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const a = readAppt();
+  if (!a.clientName) { $('#a-client').focus(); toast('Add a client name'); return; }
+  if (!a.date) { $('#a-date').focus(); toast('Pick a date'); return; }
+  a.horses = a.horses.filter(h => h.name || h.services.length || h.extra);
+  if (!a.horses.length) { toast('Add at least one horse'); return; }
+  computeAppt(a);
+  // upsert client
+  let c = findClient(a.clientName);
+  if (!c) { c = {id:uid(), name:a.clientName, horses:[]}; S.clients.push(c); }
+  if (a.phone) c.phone = a.phone;
+  if (a.address) c.address = a.address;
+  if (a.miles != null) c.miles = a.miles;
+  if (a.minutes != null) c.minutes = a.minutes;
+  a.horses.forEach(h => { if (h.name && !(c.horses || []).some(x => norm(x) === norm(h.name))) (c.horses ||= []).push(h.name); });
+  a.clientId = c.id;
+  if (editing) Object.assign(editing, a);
+  else S.appts.push({id:uid(), status:'upcoming', created:todayISO(), ...a});
+  save(); $('#dlg-appt').close();
+  if (current() === 'calendar') { calSel = a.date; calMonth = a.date.slice(0,7); }
+  render();
+  toast(editing ? 'Booking updated' : `Booked ${a.clientName} for ${fmtDate(a.date)}`);
+});
+$('#a-delete').addEventListener('click', () => {
+  if (!editing || !confirm('Delete this booking?')) return;
+  S.appts = S.appts.filter(x => x !== editing); save(); $('#dlg-appt').close(); render(); toast('Booking deleted');
+});
+
+/* ---------- ICS ---------- */
+function downloadICS(a){
+  const [y,m,d] = a.date.split('-'); const [hh,mm] = (a.time || '09:00').split(':');
+  const start = new Date(+y, +m-1, +d, +hh, +mm);
+  const end = new Date(start.getTime() + (a.duration || S.settings.defaultDuration) * 60000);
+  const f = dt => `${dt.getFullYear()}${pad(dt.getMonth()+1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
+  const e = s => String(s || '').replace(/[\\,;]/g, c => '\\' + c).replace(/\n/g, '\\n');
+  const desc = a.horses.map(h => `${h.name}: ${h.services.map(s => SVC_LABEL[s]).join(' + ')}`).join('\n') + `\nTotal: ${money(a.total)}` + (a.travel ? ` (incl. ${money(a.travel)} travel)` : '') + (a.notes ? `\n${a.notes}` : '');
+  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Clipping Book//EN','BEGIN:VEVENT',`UID:${a.id}@clippingbook`,`DTSTAMP:${f(new Date())}`,`DTSTART:${f(start)}`,`DTEND:${f(end)}`,
+    `SUMMARY:${e('Clip: ' + a.clientName + ' (' + a.horses.map(h => h.name).filter(Boolean).join(', ') + ')')}`, `LOCATION:${e(a.address)}`, `DESCRIPTION:${e(desc)}`,'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  download(`clip-${a.date}-${a.clientName.replace(/\W+/g,'-')}.ics`, ics, 'text/calendar');
+}
+function download(name, text, type){
+  const url = URL.createObjectURL(new Blob([text], {type}));
+  const l = document.createElement('a'); l.href = url; l.download = name; document.body.appendChild(l); l.click(); l.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* ---------- HISTORY ---------- */
+const apptYear = a => a.imported ? a.year : +(a.completedAt || a.date || todayISO()).slice(0,4);
+const expYear = x => x.year || +(x.date || todayISO()).slice(0,4);
+function renderHistory(){
+  const years = [...new Set([...S.appts.filter(a => a.status === 'done').map(apptYear), ...S.expenses.map(expYear), new Date().getFullYear()])].sort((a,b) => b-a);
+  const sel = $('#hist-year');
+  const y = +(sel.value || new Date().getFullYear());
+  sel.innerHTML = years.map(v => `<option ${v === y ? 'selected' : ''}>${v}</option>`).join('');
+  const done = S.appts.filter(a => a.status === 'done' && apptYear(a) === y);
+  const exps = S.expenses.filter(x => expYear(x) === y);
+  const revenue = done.reduce((s,a) => s + a.total, 0);
+  const travel = done.reduce((s,a) => s + (a.travel || 0), 0);
+  const expTotal = exps.reduce((s,x) => s + num(x.amount), 0);
+  const horses = done.reduce((s,a) => s + a.horses.length, 0);
+  $('#hist-stats').innerHTML = [
+    ['Revenue', money(revenue)], ['Expenses', money(expTotal)], ['Profit', money(revenue - expTotal)],
+    ['Horses clipped', String(horses)], ['Travel fees', money(travel)], ['Avg per horse', money(horses ? revenue / horses : 0)]
+  ].map(([k,v]) => `<div class="card stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+
+  const counts = Object.fromEntries(SERVICES.map(([k]) => [k, 0]));
+  let extrasOnly = 0;
+  done.forEach(a => a.horses.forEach(h => { h.services.forEach(s => counts[s]++); if (!h.services.length) extrasOnly++; }));
+  const max = Math.max(1, ...Object.values(counts), extrasOnly);
+  const rows = SERVICES.map(([k,l]) => [l, counts[k]]).concat([['Extras only', extrasOnly]]);
+  $('#svc-table').innerHTML = `<tbody>${rows.map(([l,n]) => `<tr><td>${l}</td><td style="width:50%"><div class="bar"><i style="width:${n / max * 100}%"></i></div></td><td class="num">${n}</td></tr>`).join('')}</tbody>`;
+
+  $('#exp-table').innerHTML = exps.length
+    ? `<thead><tr><th>Date</th><th>What for</th><th class="num">Amount</th></tr></thead><tbody>${exps.map(x => `<tr data-exp="${x.id}" style="cursor:pointer"><td>${x.date ? esc(fmtDate(x.date, {month:'short', day:'numeric'})) : '<span class="faint">—</span>'}</td><td>${esc(x.desc)}</td><td class="num">${money(x.amount)}</td></tr>`).join('')}</tbody>`
+    : `<tbody><tr><td class="muted">No expenses for ${y}.</td></tr></tbody>`;
+
+  const sorted = done.slice().sort((a,b) => (b.completedAt || b.date || '').localeCompare(a.completedAt || a.date || '') || (b.seq ?? 0) - (a.seq ?? 0));
+  $('#hist-count').textContent = `${done.length} visits`;
+  $('#hist-table').innerHTML = done.length ? `<thead><tr><th>Date</th><th>Horse</th><th>Service</th><th class="num">Travel</th><th class="num">Total</th></tr></thead><tbody>${
+    sorted.map(a => `<tr ${a.imported ? '' : `data-appt="${a.id}" style="cursor:pointer"`}>
+      <td>${a.imported ? '<span class="faint small">2026 sheet</span>' : esc(fmtDate(a.date, {month:'short', day:'numeric'}))}</td>
+      <td>${a.horses.map(h => esc(h.name)).join(', ')}${a.clientName ? `<div class="small faint">${esc(a.clientName)}</div>` : ''}</td>
+      <td class="small">${a.horses.map(h => h.services.map(s => SVC_LABEL[s]).join(' + ') + (h.extra ? `${h.services.length ? ' + ' : ''}extra ${money(h.extra)}` : '')).join('<br>')}</td>
+      <td class="num">${a.travel ? money(a.travel) : '<span class="faint">—</span>'}</td>
+      <td class="num"><b>${money(a.total)}</b></td></tr>`).join('')
+  }</tbody>` : `<tbody><tr><td class="muted">No completed visits for ${y}.</td></tr></tbody>`;
+}
+$('#hist-year').addEventListener('change', renderHistory);
+$('#hist-table').addEventListener('click', e => {
+  const tr = e.target.closest('[data-appt]'); if (!tr) return;
+  const a = S.appts.find(x => x.id === tr.dataset.appt);
+  if (a && confirm(`Move ${a.clientName} (${fmtDate(a.date)}) back to Upcoming so you can edit it?`)) { a.status = 'upcoming'; delete a.completedAt; save(); location.hash = 'upcoming'; }
+});
+
+/* ---------- EXPENSES ---------- */
+let editingExp = null;
+function openExpense(x = null){
+  editingExp = x;
+  $('#e-date').value = x ? x.date : todayISO();
+  $('#e-amount').value = x ? x.amount : '';
+  $('#e-desc').value = x ? x.desc : '';
+  $('#e-delete').classList.toggle('hide', !x);
+  $('#dlg-exp').showModal();
+}
+$('#add-expense').addEventListener('click', () => openExpense());
+$('#exp-table').addEventListener('click', e => { const tr = e.target.closest('[data-exp]'); if (tr) openExpense(S.expenses.find(x => x.id === tr.dataset.exp)); });
+$('#exp-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const amount = optNum($('#e-amount').value);
+  if (amount == null) { toast('Enter an amount'); return; }
+  const data = {date: $('#e-date').value, desc: $('#e-desc').value.trim(), amount};
+  if (editingExp) { Object.assign(editingExp, data); if (data.date) delete editingExp.year; }
+  else S.expenses.push({id:uid(), ...data});
+  save(); $('#dlg-exp').close(); renderHistory();
+});
+$('#e-delete').addEventListener('click', () => { if (editingExp && confirm('Delete this expense?')) { S.expenses = S.expenses.filter(x => x !== editingExp); save(); $('#dlg-exp').close(); renderHistory(); } });
+
+/* ---------- CLIENTS ---------- */
+let editingClient = null;
+function renderClients(){
+  const list = $('#client-list');
+  const stats = id => { const v = S.appts.filter(a => a.clientId === id); return {up: v.filter(a => a.status === 'upcoming').length, done: v.filter(a => a.status === 'done').length}; };
+  const terms = norm($('#client-search').value).split(/\s+/).filter(Boolean);
+  const hay = c => norm([c.name, c.phone, (c.phone || '').replace(/\D/g, ''), c.address, c.notes, ...(c.horses || [])].join(' '));
+  const matches = S.clients.filter(c => { const h = hay(c); return terms.every(t => h.includes(t)); });
+  if (!S.clients.length) {
+    list.innerHTML = `<div class="empty"><b>No clients saved yet</b><div class="small">They are added automatically when you book, or tap <b>+ Client</b>.</div></div>`;
+  } else if (!matches.length) {
+    list.innerHTML = `<div class="empty"><b>No clients match "${esc($('#client-search').value.trim())}"</b></div>`;
+  } else {
+    list.innerHTML = matches.sort((a,b) => a.name.localeCompare(b.name)).map(c => {
+      const st = stats(c.id); const q = travelQuote(c.miles ?? null, c.minutes ?? null);
+      return `<div class="list-item" data-client="${c.id}">
+        <div class="grow"><div class="name">${esc(c.name)}</div>
+          <div class="small muted ellipsis">${esc((c.horses || []).join(', ') || 'No horses listed')}</div>
+          <div class="small faint ellipsis">${esc(c.address || 'No address')}${c.miles != null ? ` · ${fmtN(c.miles)} mi` : ''}${c.minutes != null ? ` · ${c.minutes} min` : ''}</div></div>
+        <div style="text-align:right">${q.fee > 0 ? `<span class="pill travel">+${money(q.fee)}</span>` : q.known ? '<span class="pill good">No travel fee</span>' : ''}
+          <div class="small faint" style="margin-top:4px">${st.up ? `${st.up} upcoming` : ''}${st.up && st.done ? ' · ' : ''}${st.done ? `${st.done} done` : ''}</div></div>
+      </div>`;
+    }).join('');
+  }
+  const allHorses = allHorseNames();
+  const horses = allHorses.filter(h => terms.every(t => norm(h.name).includes(t)) || (terms.length && matches.some(c => (c.horses || []).some(x => norm(x) === norm(h.name)))));
+  $('#horse-count').textContent = terms.length ? `${horses.length} of ${allHorses.length} horses` : `${allHorses.length} horses`;
+  $('#horse-chips').innerHTML = horses.map(h => `<span class="chip">${esc(h.name)}${h.n ? `<b>${h.n}</b>` : ''}</span>`).join('');
+}
+function openClient(c = null){
+  editingClient = c;
+  $('#c-title').textContent = c ? c.name : 'New client';
+  $('#c-name').value = c?.name || ''; $('#c-phone').value = c?.phone || ''; $('#c-address').value = c?.address || '';
+  $('#c-miles').value = c?.miles ?? ''; $('#c-minutes').value = c?.minutes ?? '';
+  $('#c-horses').value = (c?.horses || []).join(', '); $('#c-notes').value = c?.notes || '';
+  $('#c-lookup-status').textContent = '';
+  $('#c-delete').classList.toggle('hide', !c); $('#c-book').classList.toggle('hide', !c);
+  updateClientFee();
+  $('#dlg-client').showModal();
+}
+function updateClientFee(){
+  const q = travelQuote(optNum($('#c-miles').value), optNum($('#c-minutes').value));
+  $('#c-fee').innerHTML = q.known ? `Travel fee for this client: <b>${money(q.fee)}</b><div class="why">${esc(q.why)}</div>` : esc(q.why);
+}
+$('#client-form').addEventListener('input', updateClientFee);
+$('#add-client').addEventListener('click', () => openClient());
+$('#client-search').addEventListener('input', renderClients);
+$('#client-list').addEventListener('click', e => { const it = e.target.closest('[data-client]'); if (it) openClient(S.clients.find(c => c.id === it.dataset.client)); });
+$('#c-lookup').addEventListener('click', async () => {
+  const b = $('#c-lookup'); b.disabled = true;
+  const d = await lookupDistance($('#c-address').value, $('#c-lookup-status'));
+  b.disabled = false;
+  if (d) { $('#c-miles').value = d.miles; $('#c-minutes').value = d.minutes; updateClientFee(); }
+});
+$('#client-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('#c-name').value.trim();
+  if (!name) { toast('Add a name'); return; }
+  const dup = findClient(name);
+  if (dup && dup !== editingClient) { toast('A client with that name already exists'); return; }
+  const data = {name, phone:$('#c-phone').value.trim(), address:$('#c-address').value.trim(),
+    miles:optNum($('#c-miles').value), minutes:optNum($('#c-minutes').value),
+    horses:$('#c-horses').value.split(',').map(s => s.trim()).filter(Boolean), notes:$('#c-notes').value.trim()};
+  if (editingClient) {
+    Object.assign(editingClient, data);
+    S.appts.forEach(a => { if (a.clientId === editingClient.id) a.clientName = name; });
+  } else S.clients.push({id:uid(), ...data});
+  save(); $('#dlg-client').close(); render();
+});
+$('#c-delete').addEventListener('click', () => {
+  if (!editingClient || !confirm(`Delete ${editingClient.name}? Their past visits stay in History.`)) return;
+  S.clients = S.clients.filter(c => c !== editingClient); save(); $('#dlg-client').close(); render();
+});
+$('#c-book').addEventListener('click', () => { const n = editingClient.name; $('#dlg-client').close(); openAppt(null, {clientName:n}); });
+
+/* ---------- SETTINGS ---------- */
+function renderSettings(){
+  const s = S.settings, t = s.travel;
+  $('#s-home').value = s.homeAddress || '';
+  $('#s-home-status').textContent = s.home ? 'Saved. Distances are measured from here.' : 'Not set yet. Distances can\'t be looked up until it is.';
+  $$('input[name="s-mode"]').forEach(r => r.checked = r.value === t.mode);
+  $$('input[name="s-style"]').forEach(r => r.checked = r.value === t.style);
+  $('#s-freeMiles').value = t.freeMiles; $('#s-perMile').value = t.perMile;
+  $('#s-freeMinutes').value = t.freeMinutes; $('#s-perMinute').value = t.perMinute;
+  $('#s-flat').value = t.flatFee; $('#s-round').checked = t.roundTrip;
+  $('#s-duration').value = s.defaultDuration;
+  $('#s-prices').innerHTML = SERVICES.map(([k,l]) => `<div><label class="f" for="p-${k}">${l}</label><div class="prefix"><span>$</span><input class="in" id="p-${k}" data-price="${k}" type="number" min="0" step="1" inputmode="decimal" value="${s.prices[k]}"></div></div>`).join('');
+  $$('#theme-seg button').forEach(b => b.classList.toggle('on', b.dataset.t === (s.theme || 'auto')));
+  settingsVisibility();
+}
+function settingsVisibility(){
+  const t = S.settings.travel;
+  $$('[data-mode]').forEach(el => el.classList.toggle('hide', el.dataset.mode !== t.mode));
+  $$('section[data-view="settings"] [data-style]').forEach(el => el.classList.toggle('hide', el.dataset.style !== t.style));
+  const ex = t.mode === 'minutes' ? [30, 60, 90].map(m => `${m} min drive → <b>${money(travelQuote(null, m).fee)}</b>`) : [20, 50, 80].map(m => `${m} mi drive → <b>${money(travelQuote(m, null).fee)}</b>`);
+  $('#s-example').innerHTML = 'Examples: ' + ex.join(' &nbsp;·&nbsp; ');
+}
+$('section[data-view="settings"]').addEventListener('input', e => {
+  const s = S.settings, t = s.travel, el = e.target;
+  if (el.name === 's-mode') t.mode = el.value;
+  else if (el.name === 's-style') t.style = el.value;
+  else if (el.dataset.price) s.prices[el.dataset.price] = num(el.value);
+  else {
+    const map = {'s-freeMiles':'freeMiles','s-perMile':'perMile','s-freeMinutes':'freeMinutes','s-perMinute':'perMinute','s-flat':'flatFee'};
+    if (map[el.id]) t[map[el.id]] = num(el.value);
+    else if (el.id === 's-round') t.roundTrip = el.checked;
+    else if (el.id === 's-duration') s.defaultDuration = num(el.value) || 90;
+    else if (el.id === 's-home') { return; }
+    else return;
+  }
+  // re-price upcoming bookings with the new rules
+  S.appts.forEach(a => { if (a.status === 'upcoming') computeAppt(a); });
+  save(); settingsVisibility();
+});
+$('#s-home-find').addEventListener('click', async () => {
+  const st = $('#s-home-status'), q = $('#s-home').value.trim(); st.classList.remove('err');
+  if (!q) { st.textContent = 'Type your home address.'; return; }
+  st.textContent = 'Looking up…';
+  try {
+    const g = await geocode(q);
+    S.settings.homeAddress = q; S.settings.home = {lat:g.lat, lon:g.lon}; save();
+    st.textContent = `Saved: ${g.label}. Distances will be measured from here.`;
+  } catch (e) { st.textContent = 'Could not find that address. Try adding the town and state.'; st.classList.add('err'); }
+});
+$('#theme-seg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.settings.theme = b.dataset.t; save(); applyTheme(); renderSettings(); });
+function applyTheme(){ const t = S.settings.theme; if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = t; }
+
+/* backup */
+$('#b-export').addEventListener('click', () => { download(`clipping-backup-${todayISO()}.json`, JSON.stringify(S, null, 2), 'application/json'); $('#b-status').textContent = 'Backup downloaded.'; });
+$('#b-import').addEventListener('click', () => $('#b-file').click());
+$('#b-file').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try {
+    const data = JSON.parse(await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsText(file); }));
+    if (data.kind === 'history-import' && Array.isArray(data.appts)) {
+      const haveA = new Set(S.appts.map(a => a.id)), haveE = new Set(S.expenses.map(x => x.id));
+      const newA = data.appts.filter(a => !haveA.has(a.id)), newE = (data.expenses || []).filter(x => !haveE.has(x.id));
+      S.appts.push(...newA); S.expenses.push(...newE); save(); render();
+      $('#b-status').textContent = newA.length || newE.length ? `Added ${newA.length} past visits and ${newE.length} expenses.` : 'That history was already imported.';
+      return;
+    }
+    if (!data.settings || !Array.isArray(data.appts)) throw new Error();
+    if (!confirm('Replace everything in this browser with the backup?')) return;
+    S = data; normalize(); save(); applyTheme(); render(); $('#b-status').textContent = 'Backup imported.';
+  } catch (err) { $('#b-status').textContent = 'That file is not a Clipping Book backup.'; }
+  e.target.value = '';
+});
+$('#b-csv').addEventListener('click', () => {
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const head = ['Date','Time','Client','Horse',...SERVICES.map(s => s[1]),'Clipping Service Amount','Extra','Miles','Drive Minutes','Travel','Total','Status','Notes'];
+  const lines = [head.map(q).join(',')];
+  S.appts.slice().sort((a,b) => (a.date||'').localeCompare(b.date||'') || (a.seq ?? 0) - (b.seq ?? 0)).forEach(a => a.horses.forEach((h, i) => {
+    lines.push([a.date || (a.imported ? '2026 (sheet)' : ''), a.time, a.clientName, h.name, ...SERVICES.map(([k]) => h.services.includes(k) ? 1 : 0),
+      h.amount, h.extra, i ? '' : a.miles, i ? '' : a.minutes, i ? 0 : a.travel, r2(num(h.amount) + num(h.extra) + (i ? 0 : a.travel)), a.status, a.notes].map(q).join(','));
+  }));
+  download(`clipping-visits-${todayISO()}.csv`, '﻿' + lines.join('\r\n'), 'text/csv');
+});
+
+/* ---------- global wiring ---------- */
+$$('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
+$('#fab').addEventListener('click', () => openAppt());
+
+boot();
+})();
+</script>
+</body>
+</html>
