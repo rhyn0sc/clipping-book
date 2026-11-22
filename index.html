@@ -208,6 +208,22 @@ body:not(.locked) #lock{display:none}
 .cal-legend{display:flex;gap:14px;font-size:13px;color:var(--ink-2);margin:10px 4px 0}
 .cal-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--accent);margin-right:5px;vertical-align:-1px}
 .cal-legend i.done{background:var(--good)}
+
+/* client form tracking */
+details.steps{background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:14px}
+details.steps summary{cursor:pointer;font-weight:700}
+details.steps ol{margin:8px 0 0;padding-left:20px;display:grid;gap:6px}
+details.steps code{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:0 4px;font-size:13px}
+.qa{display:grid;gap:10px}
+.qa div{border-bottom:1px solid var(--line);padding-bottom:8px}
+.qa div:last-child{border-bottom:0}
+.qa b{display:block;font-size:13px;color:var(--ink-2);font-weight:600}
+.qa span{white-space:pre-wrap;word-break:break-word}
+.unmatched{padding:12px 14px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.unmatched:last-child{border-bottom:0}
+.unmatched .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.unmatched select{flex:1;min-width:160px;min-height:38px;padding:6px 10px}
+.link-box{font-size:13px;word-break:break-all;background:var(--surface-2);border-radius:10px;padding:10px 12px}
 </style>
 </head>
 <body class="locked">
@@ -285,7 +301,13 @@ body:not(.locked) #lock{display:none}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input class="in" id="client-search" type="search" placeholder="Search clients, horses, addresses, phone…" autocomplete="off">
     </div>
+    <div class="status-line" id="forms-status" style="margin:-4px 2px 8px"></div>
     <div class="card" id="client-list"></div>
+    <div id="unmatched-wrap" class="hide">
+      <div class="title-row" style="margin-top:24px"><h3>Form responses to match</h3><span class="muted small" id="unmatched-count"></span></div>
+      <p class="muted small" style="margin-top:-6px">The app couldn't tell which client sent these. Pick the client for each, or create a new one.</p>
+      <div class="card" id="unmatched-list"></div>
+    </div>
     <div class="title-row" style="margin-top:24px"><h3>Horses on file</h3><span class="muted small" id="horse-count"></span></div>
     <div class="chips" id="horse-chips"></div>
   </section>
@@ -336,6 +358,44 @@ body:not(.locked) #lock{display:none}
       <div class="grid g3" id="s-prices"></div>
       <div class="grid g2">
         <div><label class="f" for="s-duration">Default appointment length</label><div class="suffix"><input class="in" id="s-duration" type="number" min="15" step="15"><span>min</span></div></div>
+      </div>
+    </div>
+
+    <div class="card settings-card">
+      <h3>Client form</h3>
+      <p class="muted small" style="margin:0">Track which clients have returned your Google Form. Once it's connected, every client and booking shows <span class="pill good">Form ✓</span> or <span class="pill travel">No form yet</span>, with a Send form button.</p>
+      <details class="steps" id="f-steps">
+        <summary>One-time setup (about 10 minutes, on a computer)</summary>
+        <ol>
+          <li>Tap <b>Generate</b> below to make a secret key.</li>
+          <li>Tap <b>Copy script</b>. It copies the script with your key already in it.</li>
+          <li>Open the form in Google Forms (the edit view). Click the <b>⋮</b> menu at the top right, then <b>Apps Script</b>.</li>
+          <li>Delete what's in the editor, paste the script, and click <b>Save</b> (the disk icon).</li>
+          <li>Click <b>Deploy → New deployment</b>. Click the gear next to "Select type" and choose <b>Web app</b>. Set <b>Execute as: Me</b> and <b>Who has access: Anyone</b>, then click <b>Deploy</b>.</li>
+          <li>Google asks for permission. Click <b>Authorize access</b> and pick your account. If it says "Google hasn't verified this app", click <b>Advanced → Go to … (unsafe)</b>. That warning appears because the script is your own and not published, and that's normal.</li>
+          <li>Copy the <b>Web app URL</b> (it ends in <code>/exec</code>), paste it below, and tap <b>Test connection</b>.</li>
+        </ol>
+      </details>
+      <div>
+        <label class="f" for="f-key">Secret key</label>
+        <div class="input-btn">
+          <input class="in" id="f-key" readonly placeholder="Tap Generate">
+          <button class="btn" type="button" id="f-gen">Generate</button>
+          <button class="btn" type="button" id="f-copy-script">Copy script</button>
+        </div>
+      </div>
+      <div>
+        <label class="f" for="f-url">Web app URL</label>
+        <div class="input-btn">
+          <input class="in" id="f-url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false">
+          <button class="btn" type="button" id="f-test">Test connection</button>
+        </div>
+        <div class="status-line" id="f-status"></div>
+      </div>
+      <div id="f-name-wrap" class="hide">
+        <label class="f" for="f-name">Which question asks for the client's name?</label>
+        <select class="in" id="f-name"></select>
+        <div class="status-line">Used to match each response to a client, and filled in automatically when you send the form.</div>
       </div>
     </div>
 
@@ -448,7 +508,11 @@ body:not(.locked) #lock{display:none}
     <div class="dlg-head"><h3 id="c-title">Client</h3><button type="button" class="btn ghost small" data-close aria-label="Close">✕</button></div>
     <div class="dlg-body">
       <div><label class="f" for="c-name">Name (owner or barn)</label><input class="in" id="c-name" required></div>
-      <div><label class="f" for="c-phone">Phone</label><input class="in" id="c-phone" type="tel"></div>
+      <div class="grid g2">
+        <div><label class="f" for="c-phone">Phone</label><input class="in" id="c-phone" type="tel"></div>
+        <div><label class="f" for="c-email">Email</label><input class="in" id="c-email" type="email" autocomplete="off"></div>
+      </div>
+      <div id="c-form" class="example hide"></div>
       <div>
         <label class="f" for="c-address">Address</label>
         <div class="input-btn"><input class="in" id="c-address"><button class="btn" type="button" id="c-lookup">Get distance</button></div>
@@ -468,6 +532,15 @@ body:not(.locked) #lock{display:none}
       <button type="button" class="btn hide" id="c-book">Book visit</button>
       <button type="submit" class="btn primary">Save</button>
     </div>
+  </form>
+</dialog>
+
+<!-- FORM DIALOG (view answers / send form) -->
+<dialog id="dlg-form">
+  <form method="dialog" novalidate>
+    <div class="dlg-head"><h3 id="fm-title">Client form</h3><button type="button" class="btn ghost small" data-close aria-label="Close">✕</button></div>
+    <div class="dlg-body" id="fm-body"></div>
+    <div class="dlg-foot" id="fm-foot"></div>
   </form>
 </dialog>
 
@@ -533,19 +606,22 @@ function defaultState(){
       prices: {full:195, irish:95, body:120, trace:95, faceHalf:20, faceFull:35},
       travel: {mode:'miles', style:'per', freeMiles:35, perMile:0.70, freeMinutes:45, perMinute:1.00, flatFee:25, roundTrip:true},
       defaultDuration: 90,
-      theme: 'auto'
+      theme: 'auto',
+      form: {url:'', key:'', nameItem:''}
     },
     clients: [],
     appts: [],
-    expenses: []
+    expenses: [],
+    forms: {fetchedAt:0, title:'', link:'', prefill:'', items:[], responses:[], links:{}, manual:{}}
   };
 }
 let S;
 function normalize(){
   if (!S || !S.settings) S = defaultState();
-  const d = defaultState().settings;
-  S.settings = {...d, ...S.settings, prices:{...d.prices, ...S.settings.prices}, travel:{...d.travel, ...S.settings.travel}};
+  const d = defaultState();
+  S.settings = {...d.settings, ...S.settings, prices:{...d.settings.prices, ...S.settings.prices}, travel:{...d.settings.travel, ...S.settings.travel}, form:{...d.settings.form, ...S.settings.form}};
   S.clients ||= []; S.appts ||= []; S.expenses ||= [];
+  S.forms = {...d.forms, ...S.forms}; S.forms.links ||= {}; S.forms.manual ||= {};
 }
 
 /* ---------- encrypted storage + login ----------
@@ -603,6 +679,7 @@ function unlock(){
   applyTheme();
   if (!location.hash) history.replaceState(null, '', '#upcoming');
   show(current());
+  maybeFetchForms(true);
 }
 async function boot(){
   if (!window.crypto || !crypto.subtle) { showLock('signin', 'This browser cannot encrypt data here. Open the app from its https:// address.'); $('#lock-go').disabled = true; return; }
@@ -752,6 +829,111 @@ function show(view){
   $('#fab').classList.toggle('hide', view === 'settings');
   render(view);
   window.scrollTo(0,0);
+  if (view === 'upcoming' || view === 'clients' || view === 'calendar') maybeFetchForms();
+}
+
+/* ---------- CLIENT FORM (Google Form via Apps Script) ---------- */
+const formsOn = () => !!(S.settings.form.url && S.settings.form.key && S.forms.fetchedAt);
+const clientById = id => S.clients.find(c => c.id === id);
+function formFor(c){
+  if (!c) return null;
+  const linked = S.forms.responses.filter(r => S.forms.links[r.id] === c.id);
+  return linked.sort((a,b) => b.at.localeCompare(a.at))[0] || null;
+}
+function nameAnswer(r){
+  const id = S.settings.form.nameItem;
+  const a = r.answers.find(x => x.id === id);
+  return a ? a.a.trim() : '';
+}
+function responseLabel(r){
+  return nameAnswer(r) || r.email || (r.answers.find(x => x.a && x.a.trim()) || {}).a || 'Response';
+}
+function formPill(c){
+  if (!formsOn() || !c) return '';
+  const r = formFor(c);
+  return r ? `<span class="pill good">Form ✓ ${esc(fmtDate(r.at.slice(0,10), {month:'short', day:'numeric'}))}</span>` : '<span class="pill travel">No form yet</span>';
+}
+function guessNameItem(items){
+  const text = items.filter(i => /TEXT/.test(i.type));
+  return text.find(i => /name/i.test(i.title) && !/horse/i.test(i.title))
+    || text.find(i => /owner/i.test(i.title)) || text.find(i => /name/i.test(i.title)) || text[0] || items[0] || null;
+}
+function matchForms(){
+  const links = S.forms.links;
+  const valid = new Set(S.forms.responses.map(r => r.id));
+  Object.keys(links).forEach(k => { if (!valid.has(k)) delete links[k]; });
+  for (const r of S.forms.responses) {
+    // '' = she unlinked it on purpose, 'ignore' = hidden; neither is auto-matched again
+    if (r.id in links && (links[r.id] === '' || links[r.id] === 'ignore' || clientById(links[r.id]))) continue;
+    delete links[r.id];
+    const name = norm(nameAnswer(r));
+    const emails = [r.email, ...r.answers.map(a => a.a)].map(norm).filter(e => e.includes('@'));
+    const answers = new Set(r.answers.map(a => norm(a.a)).filter(Boolean));
+    const c = (name && findClient(name))
+      || S.clients.find(x => x.email && emails.includes(norm(x.email)))
+      || S.clients.find(x => (x.horses || []).some(h => answers.has(norm(h)))); // e.g. a "Horse's name" answer
+    if (c) links[r.id] = c.id;
+  }
+}
+const unmatchedResponses = () => S.forms.responses.filter(r => !S.forms.links[r.id]).sort((a,b) => b.at.localeCompare(a.at));
+let formsFetching = null;
+async function fetchForms(){
+  const f = S.settings.form;
+  if (!f.url || !f.key) throw new Error('Add the secret key and web app URL first.');
+  const u = new URL(f.url);
+  u.searchParams.set('key', f.key);
+  if (f.nameItem) u.searchParams.set('nameItem', f.nameItem);
+  let j;
+  try { const r = await fetch(u.toString()); j = await r.json(); }
+  catch (e) { throw new Error('Couldn\'t reach the script. Check the URL (it should end in /exec) and that it was deployed with "Who has access: Anyone".'); }
+  if (j.error === 'unauthorized') throw new Error('The script rejected the key. Make sure the key in the script matches the one shown here, then deploy again (Deploy → Manage deployments → Edit → New version).');
+  if (!Array.isArray(j.responses)) throw new Error('Unexpected reply from the script.');
+  Object.assign(S.forms, {fetchedAt: Date.now(), title: j.title || '', link: j.link || '', prefill: j.prefill || '', items: j.items || [], responses: j.responses});
+  if (!f.nameItem || !S.forms.items.some(i => i.id === f.nameItem)) {
+    const g = guessNameItem(S.forms.items);
+    if (g) { f.nameItem = g.id; if (!j.prefill) return fetchForms(); } // fetch again to get the prefill link
+  }
+  matchForms(); save();
+  return j;
+}
+function maybeFetchForms(force){
+  const f = S.settings.form;
+  if (!f.url || !f.key || formsFetching) return;
+  if (!force && Date.now() - S.forms.fetchedAt < 120000) return;
+  formsFetching = fetchForms()
+    .then(() => { const v = current(); if (['upcoming','clients','calendar'].includes(v) && !$('dialog[open]')) render(v); })
+    .catch(e => { $('#forms-status').textContent = 'Form check failed: ' + e.message; })
+    .finally(() => { formsFetching = null; });
+}
+function formLinkFor(c){
+  if (S.forms.prefill) return S.forms.prefill.replace('__NAME__', encodeURIComponent(c ? c.name : ''));
+  return S.forms.link || '';
+}
+function openAnswers(r){
+  const c = clientById(S.forms.links[r.id]);
+  $('#fm-title').textContent = c ? `${c.name}'s form` : responseLabel(r);
+  $('#fm-body').innerHTML = `<div class="small muted">Submitted ${esc(new Date(r.at).toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'}))}${r.email ? ` · ${esc(r.email)}` : ''}</div>
+    <div class="qa">${r.answers.map(a => `<div><b>${esc(a.q)}</b><span>${esc(a.a) || '<i class="faint">(blank)</i>'}</span></div>`).join('')}</div>`;
+  $('#fm-foot').innerHTML = `<div class="spacer"></div><button type="button" class="btn primary" data-close>Close</button>`;
+  $('#fm-foot [data-close]').addEventListener('click', () => $('#dlg-form').close());
+  $('#dlg-form').showModal();
+}
+function openSendForm(c){
+  const link = formLinkFor(c);
+  if (!link) { toast('Connect your Google Form in Settings first'); return; }
+  const msg = `Hi! Before your clipping appointment, please fill out this quick form: ${link}`;
+  const phone = (c.phone || '').replace(/[^\d+]/g, '');
+  $('#fm-title').textContent = `Send form to ${c.name}`;
+  $('#fm-body').innerHTML = `<div class="small muted">${S.forms.prefill ? 'Their name is already filled in on this link.' : 'Form link:'}</div><div class="link-box">${esc(link)}</div>
+    ${!phone && !c.email ? '<div class="small faint">Add a phone number or email to this client to text or email it directly.</div>' : ''}`;
+  $('#fm-foot').innerHTML = `<button type="button" class="btn" id="fm-copy">Copy message</button><div class="spacer"></div>
+    ${c.email ? `<a class="btn" href="mailto:${esc(c.email)}?subject=${encodeURIComponent('Clipping form')}&body=${encodeURIComponent(msg)}">Email</a>` : ''}
+    ${phone ? `<a class="btn primary" href="sms:${esc(phone)}?&body=${encodeURIComponent(msg)}">Text</a>` : ''}`;
+  $('#fm-copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(msg); toast('Message copied'); }
+    catch (e) { prompt('Copy this message:', msg); }
+  });
+  $('#dlg-form').showModal();
 }
 window.addEventListener('hashchange', () => show(location.hash.slice(1)));
 function current(){ return (location.hash.slice(1) || 'upcoming'); }
@@ -798,7 +980,7 @@ function renderCalDay(){
   $('#cal-day-title').textContent = fmtDate(calSel, {weekday:'long', month:'long', day:'numeric'});
   $('#cal-day-list').innerHTML = list.length ? list.map(a => `<div class="card appt" data-cal-appt="${a.id}" style="cursor:pointer">
       <div class="time">${esc(fmtTime(a.time) || '—')}</div>
-      <div><div class="who">${esc(a.clientName)} ${a.status === 'done' ? '<span class="pill good">Done</span>' : ''}</div>
+      <div><div class="who">${esc(a.clientName)} ${a.status === 'done' ? '<span class="pill good">Done</span>' : formPill(clientById(a.clientId))}</div>
         <div class="horses">${a.horses.map(h => `${esc(h.name || 'Horse')}: ${h.services.map(s => SVC_LABEL[s]).join(' + ') || 'extras'}`).join(' · ')}</div>
         ${a.address ? `<div class="small faint">${esc(a.address)}</div>` : ''}</div>
       <div class="amt">${money(a.total)}${a.travel ? `<small>incl. ${money(a.travel)} travel</small>` : ''}</div>
@@ -834,11 +1016,12 @@ function renderUpcoming(){
   const ups = S.appts.filter(a => a.status === 'upcoming').sort((a,b) => (a.date + (a.time||'99')).localeCompare(b.date + (b.time||'99')));
   const in7 = ups.filter(a => { const d = dayDiff(a.date); return d >= 0 && d < 7; });
   const travelCount = ups.filter(a => a.travel > 0).length;
+  const missing = formsOn() ? new Set(ups.map(a => clientById(a.clientId)).filter(c => c && !formFor(c))).size : null;
   $('#up-stats').innerHTML = [
     ['Next 7 days', in7.length + (in7.length === 1 ? ' visit' : ' visits')],
     ['Expected (7 days)', money(in7.reduce((s,a) => s + a.total, 0))],
     ['All booked', money(ups.reduce((s,a) => s + a.total, 0))],
-    ['With travel fee', String(travelCount)]
+    missing != null ? ['Forms missing', String(missing)] : ['With travel fee', String(travelCount)]
   ].map(([k,v]) => `<div class="card stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
   $('#up-count').textContent = ups.length ? `${ups.length} booked` : '';
   const list = $('#up-list');
@@ -857,9 +1040,11 @@ function renderUpcoming(){
     const horses = a.horses.map(h => `${esc(h.name || 'Horse')}: ${h.services.map(s => SVC_LABEL[s]).join(' + ') || 'extras'}`).join(' · ');
     const dist = [a.miles != null ? `${fmtN(a.miles)} mi` : '', a.minutes != null ? `${a.minutes} min` : ''].filter(Boolean).join(' · ');
     const maps = a.address ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.address)}` : '';
+    const client = clientById(a.clientId);
+    const needsForm = formsOn() && client && !formFor(client);
     html += `<div class="card appt">
       <div class="time">${esc(fmtTime(a.time) || '—')}</div>
-      <div><div class="who">${esc(a.clientName)}</div><div class="horses">${horses}</div>
+      <div><div class="who">${esc(a.clientName)} ${formPill(client)}</div><div class="horses">${horses}</div>
         <div class="small faint" style="margin-top:2px">${esc(dist)} ${a.travel > 0 ? `<span class="pill travel">+${money(a.travel)} travel</span>` : a.waive ? '<span class="pill">travel waived</span>' : ''}</div>
         ${a.notes ? `<div class="small muted" style="margin-top:4px">${esc(a.notes)}</div>` : ''}
       </div>
@@ -870,6 +1055,7 @@ function renderUpcoming(){
         ${maps ? `<a class="btn small" href="${maps}" target="_blank" rel="noopener">Directions</a>` : ''}
         ${a.phone ? `<a class="btn small" href="sms:${esc(a.phone.replace(/[^\d+]/g,''))}">Text</a>` : ''}
         <button class="btn small" data-act="ics" data-id="${a.id}">Add to calendar</button>
+        ${needsForm ? `<button class="btn small" data-act="form" data-id="${a.id}">Send form</button>` : ''}
       </div>
     </div>`;
   }
@@ -880,6 +1066,7 @@ $('#up-list').addEventListener('click', e => {
   const a = S.appts.find(x => x.id === b.dataset.id); if (!a) return;
   if (b.dataset.act === 'edit') openAppt(a);
   if (b.dataset.act === 'ics') downloadICS(a);
+  if (b.dataset.act === 'form') { const c = clientById(a.clientId); if (c) openSendForm(c); }
   if (b.dataset.act === 'done') { a.status = 'done'; a.completedAt = todayISO(); save(); render(); toast(`Marked done: ${money(a.total)} added to history`); }
 });
 
@@ -1089,7 +1276,11 @@ function renderClients(){
   const list = $('#client-list');
   const stats = id => { const v = S.appts.filter(a => a.clientId === id); return {up: v.filter(a => a.status === 'upcoming').length, done: v.filter(a => a.status === 'done').length}; };
   const terms = norm($('#client-search').value).split(/\s+/).filter(Boolean);
-  const hay = c => norm([c.name, c.phone, (c.phone || '').replace(/\D/g, ''), c.address, c.notes, ...(c.horses || [])].join(' '));
+  const hay = c => norm([c.name, c.phone, (c.phone || '').replace(/\D/g, ''), c.email, c.address, c.notes, ...(c.horses || [])].join(' '));
+  const fs = S.settings.form;
+  $('#forms-status').innerHTML = fs.url && fs.key
+    ? (S.forms.fetchedAt ? `Forms checked ${esc(new Date(S.forms.fetchedAt).toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'}))} · ${S.forms.responses.length} responses · <a href="#" id="forms-refresh">Check now</a>` : 'Forms not checked yet · <a href="#" id="forms-refresh">Check now</a>')
+    : '';
   const matches = S.clients.filter(c => { const h = hay(c); return terms.every(t => h.includes(t)); });
   if (!S.clients.length) {
     list.innerHTML = `<div class="empty"><b>No clients saved yet</b><div class="small">They are added automatically when you book, or tap <b>+ Client</b>.</div></div>`;
@@ -1099,7 +1290,7 @@ function renderClients(){
     list.innerHTML = matches.sort((a,b) => a.name.localeCompare(b.name)).map(c => {
       const st = stats(c.id); const q = travelQuote(c.miles ?? null, c.minutes ?? null);
       return `<div class="list-item" data-client="${c.id}">
-        <div class="grow"><div class="name">${esc(c.name)}</div>
+        <div class="grow"><div class="name">${esc(c.name)} ${formPill(c)}</div>
           <div class="small muted ellipsis">${esc((c.horses || []).join(', ') || 'No horses listed')}</div>
           <div class="small faint ellipsis">${esc(c.address || 'No address')}${c.miles != null ? ` · ${fmtN(c.miles)} mi` : ''}${c.minutes != null ? ` · ${c.minutes} min` : ''}</div></div>
         <div style="text-align:right">${q.fee > 0 ? `<span class="pill travel">+${money(q.fee)}</span>` : q.known ? '<span class="pill good">No travel fee</span>' : ''}
@@ -1107,6 +1298,18 @@ function renderClients(){
       </div>`;
     }).join('');
   }
+  const um = formsOn() ? unmatchedResponses() : [];
+  $('#unmatched-wrap').classList.toggle('hide', !um.length);
+  $('#unmatched-count').textContent = um.length ? `${um.length} to match` : '';
+  const opts = S.clients.slice().sort((a,b) => a.name.localeCompare(b.name)).map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  $('#unmatched-list').innerHTML = um.map(r => `<div class="unmatched" data-resp="${esc(r.id)}">
+      <div><b>${esc(responseLabel(r))}</b> <span class="small faint">${esc(fmtDate(r.at.slice(0,10), {month:'short', day:'numeric'}))}</span></div>
+      <div class="row">
+        <select class="in" data-assign><option value="">Assign to client…</option>${opts}</select>
+        <button type="button" class="btn small" data-um="new">New client</button>
+        <button type="button" class="btn small" data-um="view">View answers</button>
+        <button type="button" class="btn small ghost" data-um="ignore" title="Hide this response">Ignore</button>
+      </div></div>`).join('');
   const allHorses = allHorseNames();
   const horses = allHorses.filter(h => terms.every(t => norm(h.name).includes(t)) || (terms.length && matches.some(c => (c.horses || []).some(x => norm(x) === norm(h.name)))));
   $('#horse-count').textContent = terms.length ? `${horses.length} of ${allHorses.length} horses` : `${allHorses.length} horses`;
@@ -1116,6 +1319,17 @@ function openClient(c = null){
   editingClient = c;
   $('#c-title').textContent = c ? c.name : 'New client';
   $('#c-name').value = c?.name || ''; $('#c-phone').value = c?.phone || ''; $('#c-address').value = c?.address || '';
+  $('#c-email').value = c?.email || '';
+  const cf = $('#c-form'), r = c && formsOn() ? formFor(c) : null;
+  cf.classList.toggle('hide', !(c && formsOn()));
+  if (c && formsOn()) {
+    cf.innerHTML = r
+      ? `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill good">Form ✓</span><span class="small">Returned ${esc(fmtDate(r.at.slice(0,10), {month:'short', day:'numeric', year:'numeric'}))}</span><div class="spacer"></div><button type="button" class="btn small" id="c-form-view">View answers</button><button type="button" class="btn small ghost" id="c-form-unlink">Unlink</button></div>`
+      : `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill travel">No form yet</span><div class="spacer"></div><button type="button" class="btn small primary" id="c-form-send">Send form</button></div>`;
+    $('#c-form-view')?.addEventListener('click', () => openAnswers(r));
+    $('#c-form-send')?.addEventListener('click', () => openSendForm(c));
+    $('#c-form-unlink')?.addEventListener('click', () => { S.forms.links[r.id] = ''; S.forms.manual[r.id] = true; save(); $('#dlg-client').close(); render(); toast('Response unlinked. It\'s now in "Form responses to match".'); });
+  }
   $('#c-miles').value = c?.miles ?? ''; $('#c-minutes').value = c?.minutes ?? '';
   $('#c-horses').value = (c?.horses || []).join(', '); $('#c-notes').value = c?.notes || '';
   $('#c-lookup-status').textContent = '';
@@ -1143,14 +1357,39 @@ $('#client-form').addEventListener('submit', e => {
   if (!name) { toast('Add a name'); return; }
   const dup = findClient(name);
   if (dup && dup !== editingClient) { toast('A client with that name already exists'); return; }
-  const data = {name, phone:$('#c-phone').value.trim(), address:$('#c-address').value.trim(),
+  const data = {name, phone:$('#c-phone').value.trim(), email:$('#c-email').value.trim(), address:$('#c-address').value.trim(),
     miles:optNum($('#c-miles').value), minutes:optNum($('#c-minutes').value),
     horses:$('#c-horses').value.split(',').map(s => s.trim()).filter(Boolean), notes:$('#c-notes').value.trim()};
   if (editingClient) {
     Object.assign(editingClient, data);
     S.appts.forEach(a => { if (a.clientId === editingClient.id) a.clientName = name; });
   } else S.clients.push({id:uid(), ...data});
-  save(); $('#dlg-client').close(); render();
+  matchForms(); save(); $('#dlg-client').close(); render();
+});
+$('#client-list').parentElement.addEventListener('click', e => {
+  if (e.target.id !== 'forms-refresh') return;
+  e.preventDefault();
+  $('#forms-status').textContent = 'Checking forms…';
+  formsFetching = fetchForms().then(() => { render(); toast('Forms up to date'); })
+    .catch(err => { $('#forms-status').textContent = 'Form check failed: ' + err.message; })
+    .finally(() => { formsFetching = null; });
+});
+$('#unmatched-list').addEventListener('change', e => {
+  const sel = e.target.closest('[data-assign]'); if (!sel || !sel.value) return;
+  const id = sel.closest('[data-resp]').dataset.resp, c = clientById(sel.value);
+  S.forms.links[id] = c.id; S.forms.manual[id] = true; save(); render(); toast(`Form linked to ${c.name}`);
+});
+$('#unmatched-list').addEventListener('click', e => {
+  const b = e.target.closest('[data-um]'); if (!b) return;
+  const r = S.forms.responses.find(x => x.id === b.closest('[data-resp]').dataset.resp); if (!r) return;
+  if (b.dataset.um === 'view') openAnswers(r);
+  if (b.dataset.um === 'ignore') { S.forms.links[r.id] = 'ignore'; S.forms.manual[r.id] = true; save(); render(); toast('Response hidden'); }
+  if (b.dataset.um === 'new') {
+    const name = prompt('New client name:', nameAnswer(r)); if (!name || !name.trim()) return;
+    let c = findClient(name);
+    if (!c) { c = {id:uid(), name:name.trim(), email:r.email || '', horses:[]}; S.clients.push(c); }
+    S.forms.links[r.id] = c.id; S.forms.manual[r.id] = true; save(); render(); openClient(c);
+  }
 });
 $('#c-delete').addEventListener('click', () => {
   if (!editingClient || !confirm(`Delete ${editingClient.name}? Their past visits stay in History.`)) return;
@@ -1171,8 +1410,56 @@ function renderSettings(){
   $('#s-duration').value = s.defaultDuration;
   $('#s-prices').innerHTML = SERVICES.map(([k,l]) => `<div><label class="f" for="p-${k}">${l}</label><div class="prefix"><span>$</span><input class="in" id="p-${k}" data-price="${k}" type="number" min="0" step="1" inputmode="decimal" value="${s.prices[k]}"></div></div>`).join('');
   $$('#theme-seg button').forEach(b => b.classList.toggle('on', b.dataset.t === (s.theme || 'auto')));
+  $('#f-key').value = s.form.key || '';
+  $('#f-url').value = s.form.url || '';
+  $('#f-steps').open = !(s.form.key && s.form.url);
+  if (S.forms.fetchedAt) $('#f-status').textContent = `Connected to "${S.forms.title}" · ${S.forms.responses.length} responses`;
+  renderNameSelect();
   settingsVisibility();
 }
+function renderNameSelect(){
+  const items = S.forms.items || [];
+  $('#f-name-wrap').classList.toggle('hide', !items.length);
+  $('#f-name').innerHTML = items.map(i => `<option value="${esc(i.id)}" ${i.id === S.settings.form.nameItem ? 'selected' : ''}>${esc(i.title)}</option>`).join('');
+}
+$('#f-gen').addEventListener('click', () => {
+  const f = S.settings.form;
+  if (f.key && !confirm('Make a new key? The script in Google will need the new key pasted in and a new deployment.')) return;
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  f.key = b64(bytes).replace(/[+/=]/g, c => ({'+':'-','/':'_','=':''}[c]));
+  $('#f-key').value = f.key; save();
+  toast('Key made. Now tap Copy script.');
+});
+$('#f-copy-script').addEventListener('click', async () => {
+  const f = S.settings.form;
+  if (!f.key) { toast('Tap Generate first'); return; }
+  let code;
+  try { const r = await fetch('apps-script/Code.gs', {cache:'no-store'}); if (!r.ok) throw 0; code = await r.text(); }
+  catch (e) { window.open('https://github.com/rhyn0sc/clipping-book/blob/main/apps-script/Code.gs', '_blank'); toast('Couldn\'t load the script here. Copy it from GitHub and paste your key into it.'); return; }
+  code = code.replace('PASTE-YOUR-KEY-FROM-THE-APP-HERE', f.key);
+  try { await navigator.clipboard.writeText(code); toast('Script copied with your key in it'); }
+  catch (e) { prompt('Copy the script:', code); }
+});
+$('#f-url').addEventListener('change', () => { S.settings.form.url = $('#f-url').value.trim(); S.forms.fetchedAt = 0; save(); });
+$('#f-test').addEventListener('click', async () => {
+  const st = $('#f-status'), b = $('#f-test');
+  S.settings.form.url = $('#f-url').value.trim();
+  st.classList.remove('err'); st.textContent = 'Connecting…'; b.disabled = true;
+  try {
+    await fetchForms();
+    st.textContent = `Connected to "${S.forms.title}" · ${S.forms.responses.length} responses, ${S.forms.responses.length - unmatchedResponses().length} matched to clients`;
+    renderNameSelect();
+  } catch (e) { st.textContent = e.message; st.classList.add('err'); }
+  finally { b.disabled = false; }
+});
+$('#f-name').addEventListener('change', async () => {
+  S.settings.form.nameItem = $('#f-name').value;
+  // re-run matching with the new question (keep manual choices)
+  Object.keys(S.forms.links).forEach(k => { if (!S.forms.manual[k]) delete S.forms.links[k]; });
+  save();
+  try { await fetchForms(); $('#f-status').textContent = `Updated · ${S.forms.responses.length - unmatchedResponses().length} of ${S.forms.responses.length} responses matched`; }
+  catch (e) { $('#f-status').textContent = e.message; }
+});
 function settingsVisibility(){
   const t = S.settings.travel;
   $$('[data-mode]').forEach(el => el.classList.toggle('hide', el.dataset.mode !== t.mode));
