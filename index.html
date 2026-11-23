@@ -219,6 +219,13 @@ details.steps code{background:var(--surface);border:1px solid var(--line);border
 .qa div:last-child{border-bottom:0}
 .qa b{display:block;font-size:13px;color:var(--ink-2);font-weight:600}
 .qa span{white-space:pre-wrap;word-break:break-word}
+.client-forms{margin-top:6px;font-size:14px}
+.client-forms summary{cursor:pointer;color:var(--accent);font-weight:600;padding:4px 0}
+.form-list{display:grid;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;margin-top:4px}
+.form-row{display:flex;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);font-size:14px}
+.form-row:last-child{border-bottom:0}
+.form-row .grow{flex:1;min-width:0}
+.warn-text{color:var(--warn)}
 .unmatched{padding:12px 14px;border-bottom:1px solid var(--line);display:grid;gap:8px}
 .unmatched:last-child{border-bottom:0}
 .unmatched .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
@@ -835,10 +842,31 @@ function show(view){
 /* ---------- CLIENT FORM (Google Form via Apps Script) ---------- */
 const formsOn = () => !!(S.settings.form.url && S.settings.form.key && S.forms.fetchedAt);
 const clientById = id => S.clients.find(c => c.id === id);
-function formFor(c){
-  if (!c) return null;
-  const linked = S.forms.responses.filter(r => S.forms.links[r.id] === c.id);
-  return linked.sort((a,b) => b.at.localeCompare(a.at))[0] || null;
+function formsFor(c){
+  if (!c) return [];
+  return S.forms.responses.filter(r => S.forms.links[r.id] === c.id).sort((a,b) => b.at.localeCompare(a.at));
+}
+const formFor = c => formsFor(c)[0] || null;
+// horses of this client named anywhere in a response, e.g. a barn boarder's form listing their horse
+function formHorses(r, c){
+  const answers = new Set(r.answers.map(a => norm(a.a)));
+  return (c.horses || []).filter(h => answers.has(norm(h)));
+}
+// for barns: which of the client's horses no linked form mentions (only if forms mention horses at all)
+function horsesWithoutForm(c){
+  const forms = formsFor(c);
+  const covered = new Set(forms.flatMap(r => formHorses(r, c)).map(norm));
+  if (!covered.size) return [];
+  return (c.horses || []).filter(h => !covered.has(norm(h)));
+}
+function formRowHTML(r, c, withUnlink){
+  const hs = formHorses(r, c);
+  return `<div class="form-row">
+      <div class="grow"><b>${esc(nameAnswer(r) || r.email || 'Response')}</b>${hs.length ? ` <span class="muted">· ${esc(hs.join(', '))}</span>` : ''}
+        <div class="small faint">${esc(fmtDate(r.at.slice(0,10), {month:'short', day:'numeric', year:'numeric'}))}</div></div>
+      <button type="button" class="btn small" data-view-resp="${esc(r.id)}">View</button>
+      ${withUnlink ? `<button type="button" class="btn small ghost" data-unlink-resp="${esc(r.id)}">Unlink</button>` : ''}
+    </div>`;
 }
 function nameAnswer(r){
   const id = S.settings.form.nameItem;
@@ -850,8 +878,10 @@ function responseLabel(r){
 }
 function formPill(c){
   if (!formsOn() || !c) return '';
-  const r = formFor(c);
-  return r ? `<span class="pill good">Form ✓ ${esc(fmtDate(r.at.slice(0,10), {month:'short', day:'numeric'}))}</span>` : '<span class="pill travel">No form yet</span>';
+  const fs = formsFor(c);
+  if (!fs.length) return '<span class="pill travel">No form yet</span>';
+  if (fs.length > 1) return `<span class="pill good">${fs.length} forms ✓</span>`;
+  return `<span class="pill good">Form ✓ ${esc(fmtDate(fs[0].at.slice(0,10), {month:'short', day:'numeric'}))}</span>`;
 }
 function guessNameItem(items){
   const text = items.filter(i => /TEXT/.test(i.type));
@@ -911,7 +941,8 @@ function formLinkFor(c){
 }
 function openAnswers(r){
   const c = clientById(S.forms.links[r.id]);
-  $('#fm-title').textContent = c ? `${c.name}'s form` : responseLabel(r);
+  const who = nameAnswer(r);
+  $('#fm-title').textContent = c ? (who && norm(who) !== norm(c.name) ? `${who} · ${c.name}` : `${c.name}'s form`) : responseLabel(r);
   $('#fm-body').innerHTML = `<div class="small muted">Submitted ${esc(new Date(r.at).toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'}))}${r.email ? ` · ${esc(r.email)}` : ''}</div>
     <div class="qa">${r.answers.map(a => `<div><b>${esc(a.q)}</b><span>${esc(a.a) || '<i class="faint">(blank)</i>'}</span></div>`).join('')}</div>`;
   $('#fm-foot').innerHTML = `<div class="spacer"></div><button type="button" class="btn primary" data-close>Close</button>`;
@@ -1289,10 +1320,16 @@ function renderClients(){
   } else {
     list.innerHTML = matches.sort((a,b) => a.name.localeCompare(b.name)).map(c => {
       const st = stats(c.id); const q = travelQuote(c.miles ?? null, c.minutes ?? null);
+      const fs = formsOn() ? formsFor(c) : [];
+      const missingH = fs.length ? horsesWithoutForm(c) : [];
+      const drop = fs.length > 1 ? `<details class="client-forms">
+          <summary>${fs.length} forms from this barn${missingH.length ? ` · <span class="warn-text">no form yet for ${esc(missingH.join(', '))}</span>` : ''}</summary>
+          <div class="form-list">${fs.map(r => formRowHTML(r, c, false)).join('')}</div>
+        </details>` : '';
       return `<div class="list-item" data-client="${c.id}">
         <div class="grow"><div class="name">${esc(c.name)} ${formPill(c)}</div>
           <div class="small muted ellipsis">${esc((c.horses || []).join(', ') || 'No horses listed')}</div>
-          <div class="small faint ellipsis">${esc(c.address || 'No address')}${c.miles != null ? ` · ${fmtN(c.miles)} mi` : ''}${c.minutes != null ? ` · ${c.minutes} min` : ''}</div></div>
+          <div class="small faint ellipsis">${esc(c.address || 'No address')}${c.miles != null ? ` · ${fmtN(c.miles)} mi` : ''}${c.minutes != null ? ` · ${c.minutes} min` : ''}</div>${drop}</div>
         <div style="text-align:right">${q.fee > 0 ? `<span class="pill travel">+${money(q.fee)}</span>` : q.known ? '<span class="pill good">No travel fee</span>' : ''}
           <div class="small faint" style="margin-top:4px">${st.up ? `${st.up} upcoming` : ''}${st.up && st.done ? ' · ' : ''}${st.done ? `${st.done} done` : ''}</div></div>
       </div>`;
@@ -1320,15 +1357,15 @@ function openClient(c = null){
   $('#c-title').textContent = c ? c.name : 'New client';
   $('#c-name').value = c?.name || ''; $('#c-phone').value = c?.phone || ''; $('#c-address').value = c?.address || '';
   $('#c-email').value = c?.email || '';
-  const cf = $('#c-form'), r = c && formsOn() ? formFor(c) : null;
+  const cf = $('#c-form');
   cf.classList.toggle('hide', !(c && formsOn()));
   if (c && formsOn()) {
-    cf.innerHTML = r
-      ? `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill good">Form ✓</span><span class="small">Returned ${esc(fmtDate(r.at.slice(0,10), {month:'short', day:'numeric', year:'numeric'}))}</span><div class="spacer"></div><button type="button" class="btn small" id="c-form-view">View answers</button><button type="button" class="btn small ghost" id="c-form-unlink">Unlink</button></div>`
-      : `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill travel">No form yet</span><div class="spacer"></div><button type="button" class="btn small primary" id="c-form-send">Send form</button></div>`;
-    $('#c-form-view')?.addEventListener('click', () => openAnswers(r));
-    $('#c-form-send')?.addEventListener('click', () => openSendForm(c));
-    $('#c-form-unlink')?.addEventListener('click', () => { S.forms.links[r.id] = ''; S.forms.manual[r.id] = true; save(); $('#dlg-client').close(); render(); toast('Response unlinked. It\'s now in "Form responses to match".'); });
+    const fs = formsFor(c), missingH = horsesWithoutForm(c);
+    const head = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${formPill(c)}<div class="spacer"></div><button type="button" class="btn small ${fs.length ? '' : 'primary'}" id="c-form-send">Send form</button></div>`;
+    cf.innerHTML = head
+      + (fs.length ? `<div class="form-list" style="margin-top:8px">${fs.map(r => formRowHTML(r, c, true)).join('')}</div>` : '')
+      + (missingH.length ? `<div class="small warn-text" style="margin-top:6px">No form mentions: ${esc(missingH.join(', '))}</div>` : '');
+    $('#c-form-send').addEventListener('click', () => openSendForm(c));
   }
   $('#c-miles').value = c?.miles ?? ''; $('#c-minutes').value = c?.minutes ?? '';
   $('#c-horses').value = (c?.horses || []).join(', '); $('#c-notes').value = c?.notes || '';
@@ -1344,7 +1381,20 @@ function updateClientFee(){
 $('#client-form').addEventListener('input', updateClientFee);
 $('#add-client').addEventListener('click', () => openClient());
 $('#client-search').addEventListener('input', renderClients);
-$('#client-list').addEventListener('click', e => { const it = e.target.closest('[data-client]'); if (it) openClient(S.clients.find(c => c.id === it.dataset.client)); });
+$('#client-list').addEventListener('click', e => {
+  const v = e.target.closest('[data-view-resp]');
+  if (v) { const r = S.forms.responses.find(x => x.id === v.dataset.viewResp); if (r) openAnswers(r); return; }
+  if (e.target.closest('.client-forms')) return; // opening/closing the forms dropdown
+  const it = e.target.closest('[data-client]'); if (it) openClient(S.clients.find(c => c.id === it.dataset.client));
+});
+$('#c-form').addEventListener('click', e => {
+  const v = e.target.closest('[data-view-resp]'), u = e.target.closest('[data-unlink-resp]');
+  if (v) { const r = S.forms.responses.find(x => x.id === v.dataset.viewResp); if (r) openAnswers(r); }
+  if (u) {
+    const id = u.dataset.unlinkResp; S.forms.links[id] = ''; S.forms.manual[id] = true; save();
+    openClient(editingClient); render(); toast('Form unlinked. It\'s now in "Form responses to match".');
+  }
+});
 $('#c-lookup').addEventListener('click', async () => {
   const b = $('#c-lookup'); b.disabled = true;
   const d = await lookupDistance($('#c-address').value, $('#c-lookup-status'));
