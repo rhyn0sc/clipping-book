@@ -476,7 +476,8 @@ details.steps code{background:var(--surface);border:1px solid var(--line);border
         <div>
           <label class="f" for="a-address">Address</label>
           <div class="input-btn">
-            <input class="in" id="a-address" placeholder="Where she's driving to" autocomplete="off">
+            <input class="in" id="a-address" placeholder="Street address, or pin coordinates" autocomplete="off">
+            <button class="btn" type="button" id="a-copy-addr" title="Copy address" aria-label="Copy address">📋</button>
             <button class="btn" type="button" id="a-lookup">Get distance</button>
           </div>
           <div class="status-line" id="a-lookup-status"></div>
@@ -522,7 +523,7 @@ details.steps code{background:var(--surface);border:1px solid var(--line);border
       <div id="c-form" class="example hide"></div>
       <div>
         <label class="f" for="c-address">Address</label>
-        <div class="input-btn"><input class="in" id="c-address"><button class="btn" type="button" id="c-lookup">Get distance</button></div>
+        <div class="input-btn"><input class="in" id="c-address" placeholder="Street address, or pin coordinates"><button class="btn" type="button" id="c-copy-addr" title="Copy address" aria-label="Copy address">📋</button><button class="btn" type="button" id="c-lookup">Get distance</button></div>
         <div class="status-line" id="c-lookup-status"></div>
       </div>
       <div class="grid g2">
@@ -782,26 +783,68 @@ function computeAppt(a){
   return q;
 }
 
-/* ---------- maps (free, no key) ---------- */
-async function geocode(q){
+/* ---------- maps (free, no key) ----------
+   Lookup order: pasted coordinates / Google Maps link → US Census (best for US street
+   addresses, incl. rural roads) → Photon → Nominatim (both OpenStreetMap). */
+const NOT_FOUND = 'Couldn\'t find that address. Check the spelling and include the town and state. If it still won\'t work, open Google Maps, press and hold on the barn to drop a pin, copy the numbers that appear (like 39.12345, -104.56789), and paste them into the address box.';
+function parseCoords(q){
+  // "39.123, -104.567", or a Google Maps link containing @lat,lon / q=lat,lon / !3dlat!4dlon
+  const m = q.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/) || q.match(/[@=](-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/) || q.trim().match(/^\(?\s*(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*\)?$/);
+  if (!m) return null;
+  const lat = +m[1], lon = +m[2];
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+  return {lat, lon, label:`the pin at ${lat.toFixed(5)}, ${lon.toFixed(5)}`};
+}
+function jsonp(url, ms = 9000){
+  return new Promise((ok, no) => {
+    const cb = 'cbj' + Math.random().toString(36).slice(2);
+    const s = document.createElement('script');
+    const done = () => { clearTimeout(t); delete window[cb]; s.remove(); };
+    const t = setTimeout(() => { done(); no(new Error('timeout')); }, ms);
+    window[cb] = data => { done(); ok(data); };
+    s.onerror = () => { done(); no(new Error('load failed')); };
+    s.src = url + '&callback=' + cb;
+    document.head.appendChild(s);
+  });
+}
+async function geoCensus(q){
+  if (!/^\s*\d+[a-z]?\s+\S/i.test(q)) return null; // only street addresses that start with a house number
+  const j = await jsonp(`https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?benchmark=Public_AR_Current&format=jsonp&address=${encodeURIComponent(q)}`);
+  const m = j && j.result && j.result.addressMatches && j.result.addressMatches[0];
+  return m ? {lat:m.coordinates.y, lon:m.coordinates.x, label:m.matchedAddress} : null;
+}
+async function geoPhoton(q){
   const home = S.settings.home;
   const bias = home ? `&lat=${home.lat}&lon=${home.lon}` : '';
-  try {
-    const r = await fetch(`https://photon.komoot.io/api/?limit=1&q=${encodeURIComponent(q)}${bias}`);
-    if (r.ok) {
-      const j = await r.json();
-      const f = j.features && j.features[0];
-      if (f) {
-        const p = f.properties || {};
-        const label = [p.housenumber && p.street ? `${p.housenumber} ${p.street}` : (p.name || p.street), p.city || p.county, p.state].filter(Boolean).join(', ');
-        return {lon:f.geometry.coordinates[0], lat:f.geometry.coordinates[1], label};
-      }
-    }
-  } catch (e) { /* fall through */ }
-  const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}`);
+  const r = await fetch(`https://photon.komoot.io/api/?limit=1&q=${encodeURIComponent(q)}${bias}`);
+  if (!r.ok) return null;
+  const f = ((await r.json()).features || [])[0];
+  if (!f) return null;
+  const p = f.properties || {};
+  const label = [p.housenumber && p.street ? `${p.housenumber} ${p.street}` : (p.name || p.street), p.city || p.county, p.state].filter(Boolean).join(', ');
+  return {lon:f.geometry.coordinates[0], lat:f.geometry.coordinates[1], label};
+}
+async function geoNominatim(q){
+  const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=us&q=${encodeURIComponent(q)}`);
   const j = await r.json();
-  if (!j[0]) throw new Error('Address not found. Try adding the town and state.');
-  return {lat:+j[0].lat, lon:+j[0].lon, label:j[0].display_name.split(',').slice(0,3).join(',')};
+  return j[0] ? {lat:+j[0].lat, lon:+j[0].lon, label:j[0].display_name.split(',').slice(0,3).join(',')} : null;
+}
+async function geocode(q){
+  const c = parseCoords(q); if (c) return c;
+  let online = false;
+  for (const fn of [geoCensus, geoPhoton, geoNominatim]) {
+    try { const g = await fn(q); online = true; if (g) return g; } catch (e) { /* try the next service */ }
+  }
+  throw new Error(online ? NOT_FOUND : 'Lookup failed (are you online?). You can type miles and minutes yourself.');
+}
+async function copyText(text, what = 'Copied'){
+  try { await navigator.clipboard.writeText(text); toast(`${what}. Paste it into Google Maps.`); return; } catch (e) { /* older phones */ }
+  const ta = Object.assign(document.createElement('textarea'), {value:text, readOnly:true});
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+  let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+  ta.remove();
+  if (ok) toast(`${what}. Paste it into Google Maps.`); else prompt('Copy this address:', text);
 }
 async function route(from, to){
   const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=false`);
@@ -820,7 +863,7 @@ async function lookupDistance(address, statusEl){
     statusEl.textContent = `Found ${g.label}: ${d.miles} mi, about ${d.minutes} min each way.`;
     return {...d, lat:g.lat, lon:g.lon};
   } catch (e) {
-    statusEl.textContent = (e.message && !/fetch/i.test(e.message)) ? e.message : 'Lookup failed (are you online?). You can type miles and minutes yourself.';
+    statusEl.textContent = (e.message && !/fetch|route/i.test(e.message)) ? e.message : /route/i.test(e.message || '') ? 'Found the address but couldn\'t work out a driving route. Try a nearby road, or type miles and minutes yourself.' : 'Lookup failed (are you online?). You can type miles and minutes yourself.';
     statusEl.classList.add('err');
     return null;
   }
@@ -1015,10 +1058,13 @@ function renderCalDay(){
         <div class="horses">${a.horses.map(h => `${esc(h.name || 'Horse')}: ${h.services.map(s => SVC_LABEL[s]).join(' + ') || 'extras'}`).join(' · ')}</div>
         ${a.address ? `<div class="small faint">${esc(a.address)}</div>` : ''}</div>
       <div class="amt">${money(a.total)}${a.travel ? `<small>incl. ${money(a.travel)} travel</small>` : ''}</div>
+      ${a.address ? `<div class="actions"><button type="button" class="btn small" data-copy-addr="${a.id}">📋 Address</button></div>` : ''}
     </div>`).join('') : `<div class="card empty small">Nothing booked this day.</div>`;
 }
 $('#cal-grid').addEventListener('click', e => { const b = e.target.closest('[data-day]'); if (!b) return; calSel = b.dataset.day; if (calSel.slice(0,7) !== calMonth) calMonth = calSel.slice(0,7); renderCalendar(); });
 $('#cal-day-list').addEventListener('click', e => {
+  const cp = e.target.closest('[data-copy-addr]');
+  if (cp) { const a = S.appts.find(x => x.id === cp.dataset.copyAddr); if (a) copyText(a.address, 'Address copied'); return; }
   const c = e.target.closest('[data-cal-appt]'); if (!c) return;
   const a = S.appts.find(x => x.id === c.dataset.calAppt);
   if (a && a.status === 'upcoming') openAppt(a); else if (a) toast('This visit is done. Find it in History.');
@@ -1083,6 +1129,7 @@ function renderUpcoming(){
       <div class="actions">
         <button class="btn small primary" data-act="done" data-id="${a.id}">✓ Done</button>
         <button class="btn small" data-act="edit" data-id="${a.id}">Edit</button>
+        ${a.address ? `<button class="btn small" data-act="copy-addr" data-id="${a.id}">📋 Address</button>` : ''}
         ${maps ? `<a class="btn small" href="${maps}" target="_blank" rel="noopener">Directions</a>` : ''}
         ${a.phone ? `<a class="btn small" href="sms:${esc(a.phone.replace(/[^\d+]/g,''))}">Text</a>` : ''}
         <button class="btn small" data-act="ics" data-id="${a.id}">Add to calendar</button>
@@ -1097,6 +1144,7 @@ $('#up-list').addEventListener('click', e => {
   const a = S.appts.find(x => x.id === b.dataset.id); if (!a) return;
   if (b.dataset.act === 'edit') openAppt(a);
   if (b.dataset.act === 'ics') downloadICS(a);
+  if (b.dataset.act === 'copy-addr') copyText(a.address, 'Address copied');
   if (b.dataset.act === 'form') { const c = clientById(a.clientId); if (c) openSendForm(c); }
   if (b.dataset.act === 'done') { a.status = 'done'; a.completedAt = todayISO(); save(); render(); toast(`Marked done: ${money(a.total)} added to history`); }
 });
@@ -1173,11 +1221,13 @@ $('#a-client').addEventListener('change', () => {
   }
   updateSummary();
 });
+$('#a-copy-addr').addEventListener('click', () => { const v = $('#a-address').value.trim(); if (v) copyText(v, 'Address copied'); else toast('No address yet'); });
 $('#a-lookup').addEventListener('click', async () => {
   const b = $('#a-lookup'); b.disabled = true;
   const d = await lookupDistance($('#a-address').value, $('#a-lookup-status'));
   b.disabled = false;
   if (d) { $('#a-miles').value = d.miles; $('#a-minutes').value = d.minutes; updateSummary(); }
+  else if (S.settings.home && $('#a-address').value.trim()) { $('#a-miles').value = ''; $('#a-minutes').value = ''; updateSummary(); } // don't keep a distance from a different address
 });
 $('#a-add-horse').addEventListener('click', () => { $('#a-horses').insertAdjacentHTML('beforeend', horseRowHTML()); updateSummary(); $$('#a-horses .h-name').pop().focus(); });
 $('#a-horses').addEventListener('click', e => { if (e.target.closest('.h-remove')) { e.target.closest('.horse-row').remove(); updateSummary(); } });
@@ -1395,11 +1445,13 @@ $('#c-form').addEventListener('click', e => {
     openClient(editingClient); render(); toast('Form unlinked. It\'s now in "Form responses to match".');
   }
 });
+$('#c-copy-addr').addEventListener('click', () => { const v = $('#c-address').value.trim(); if (v) copyText(v, 'Address copied'); else toast('No address yet'); });
 $('#c-lookup').addEventListener('click', async () => {
   const b = $('#c-lookup'); b.disabled = true;
   const d = await lookupDistance($('#c-address').value, $('#c-lookup-status'));
   b.disabled = false;
   if (d) { $('#c-miles').value = d.miles; $('#c-minutes').value = d.minutes; updateClientFee(); }
+  else if (S.settings.home && $('#c-address').value.trim()) { $('#c-miles').value = ''; $('#c-minutes').value = ''; updateClientFee(); }
 });
 $('#client-form').addEventListener('submit', e => {
   e.preventDefault();
