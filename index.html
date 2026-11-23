@@ -1116,7 +1116,6 @@ function renderUpcoming(){
     }
     const horses = a.horses.map(h => `${esc(h.name || 'Horse')}: ${h.services.map(s => SVC_LABEL[s]).join(' + ') || 'extras'}`).join(' · ');
     const dist = [a.miles != null ? `${fmtN(a.miles)} mi` : '', a.minutes != null ? `${a.minutes} min` : ''].filter(Boolean).join(' · ');
-    const maps = a.address ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a.address)}` : '';
     const client = clientById(a.clientId);
     const needsForm = formsOn() && client && !formFor(client);
     html += `<div class="card appt">
@@ -1130,7 +1129,6 @@ function renderUpcoming(){
         <button class="btn small primary" data-act="done" data-id="${a.id}">✓ Done</button>
         <button class="btn small" data-act="edit" data-id="${a.id}">Edit</button>
         ${a.address ? `<button class="btn small" data-act="copy-addr" data-id="${a.id}">📋 Address</button>` : ''}
-        ${maps ? `<a class="btn small" href="${maps}" target="_blank" rel="noopener">Directions</a>` : ''}
         ${a.phone ? `<a class="btn small" href="sms:${esc(a.phone.replace(/[^\d+]/g,''))}">Text</a>` : ''}
         <button class="btn small" data-act="ics" data-id="${a.id}">Add to calendar</button>
         ${needsForm ? `<button class="btn small" data-act="form" data-id="${a.id}">Send form</button>` : ''}
